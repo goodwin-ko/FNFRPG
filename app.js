@@ -221,9 +221,16 @@ async function fetchUserData(nicName) {
   setSearchStatus('데이터를 불러오는 중입니다...');
 
   try {
-    const apiUrl = `https://m16tool.xyz/Game/FNF%20RPG%20J/UserLog/LogResult?nicName=${encodeURIComponent(nicName)}`;
-    const proxyUrl = `https://cors-anywhere.herokuapp.com/${apiUrl}`;
-    const response = await fetch(proxyUrl);
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    let url;
+
+    if (isLocal) {
+      url = `https://m16tool.xyz/Game/FNF%20RPG%20J/UserLog/LogResult?nicName=${encodeURIComponent(nicName)}`;
+    } else {
+      url = `/api/proxy?nicName=${encodeURIComponent(nicName)}`;
+    }
+
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
