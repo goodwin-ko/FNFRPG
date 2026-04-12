@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>세이브 데이터 인터페이스</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="title-bar">
+      <h1>SAVED DATA INTERFACE</h1>
+      <p>세이브 데이터 인터페이스</p>
+    </header>
+
+    <section class="card basic-info">
+      <div class="card-header">BASIC INFO</div>
+      <div class="card-content">
+        <div class="item-search">
+          <input id="user-search" type="text" placeholder="아이디 입력 (예: goodwin)" />
+          <button id="user-search-button" type="button">검색</button>
+        </div>
+        <div id="search-status" class="item-search-result">아이디를 입력하고 검색 버튼을 누르세요.</div>
+        <div class="info-row">
+          <span class="label">ID</span>
+          <span id="save-id" class="value">-</span>
+        </div>
+        <div class="info-row">
+          <span class="label">마지막 저장 시간</span>
+          <span id="save-time" class="value">-</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card hero-stats">
+      <div class="section-title">HERO & GAME STATS</div>
+      <div class="horizontal-grid">
+        <article class="panel hero-panel">
+          <div class="panel-header">HERO STATS</div>
+          <div class="panel-content">
+            <div class="stat-row"><span>STR (힘)</span><span id="stat-str">-</span></div>
+            <div class="stat-row"><span>AGI (민첩)</span><span id="stat-agi">-</span></div>
+            <div class="stat-row"><span>INT (지능)</span><span id="stat-int">-</span></div>
+          </div>
+        </article>
+
+        <article class="panel detail-panel">
+          <div class="panel-header">DETAILED STATS</div>
+          <div class="panel-content grid-cols-2">
+            <div class="detail-item"><span>이만강</span><strong id="detail-damage">-</strong></div>
+            <div class="detail-item"><span>수련치</span><strong id="detail-training">-</strong></div>
+            <div class="detail-item"><span>정수</span><strong id="detail-essence">-</strong></div>
+            <div class="detail-item"><span>정수뱅크</span><strong id="detail-bank">-</strong></div>
+            <div class="detail-item"><span>정신력</span><strong id="detail-mind">-</strong></div>
+            <div class="detail-item"><span>정력</span><strong id="detail-energy">-</strong></div>
+        <div class="detail-item"><span>VIP</span><strong id="detail-vip">-</strong></div>
+        <div class="detail-item"><span>별성</span><strong id="detail-rank">-</strong></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="card equipment-section">
+      <div class="section-title">EQUIPMENT TABS</div>
+      <div class="equipment-grid">
+        <div class="equipment-box">
+          <div class="box-title">HERO EQUIPMENT</div>
+          <div id="hero-equipment" class="equipment-list"></div>
+        </div>
+        <div class="equipment-box">
+          <div class="box-title">BAG EQUIPMENT</div>
+          <div id="bag-equipment" class="equipment-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card pet-info">
+      <div class="section-title">PET INFO</div>
+      <div class="pet-grid">
+        <div class="pet-item"><span>Power STR</span><strong id="pet-str">-</strong></div>
+        <div class="pet-item"><span>AGI</span><strong id="pet-agi">-</strong></div>
+        <div class="pet-item"><span>INT</span><strong id="pet-int">-</strong></div>
+      </div>
+    </section>
+
+    <section class="card inventory-section">
+      <div class="section-title">INVENTORY BAGS</div>
+      <div id="bags-container" class="bags-grid"></div>
+    </section>
+
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
