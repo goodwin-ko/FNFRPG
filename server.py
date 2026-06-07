@@ -8,7 +8,7 @@ import os
 import mimetypes
 import sys
 
-PORT = 8000
+PORT = int(os.environ.get('PORT', 8000))
 
 def fetch_and_parse(nicname):
     encoded_name = urllib.parse.quote(nicname)
