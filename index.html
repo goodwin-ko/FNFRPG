@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FNF RPG J 캐릭터 정보 분석기</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar: Rankings -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <i class="fa-solid fa-trophy ranking-icon"></i>
+                <h2>FNF RPG J 랭킹 (Top 30)</h2>
+            </div>
+            <div class="ranking-list-container">
+                <table class="ranking-table" id="rankingTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 35%">순위</th>
+                            <th style="width: 37%">닉네임</th>
+                            <th style="width: 28%">스코어</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rankingBody">
+                        <tr>
+                            <td colspan="3" class="text-center loading-text">
+                                <i class="fa-solid fa-spinner fa-spin"></i> 랭킹 불러오는 중...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Top Navigation & Search -->
+            <header class="top-nav">
+                <div class="logo-area">
+                    <span class="logo-sub">FNF RPG J</span>
+                    <h1 class="logo-title">캐릭터 정보 분석기</h1>
+                </div>
+                
+                <div class="search-box-container">
+                    <form id="searchForm" class="search-form">
+                        <div class="search-input-wrapper">
+                            <i class="fa-solid fa-user search-user-icon"></i>
+                            <input type="text" id="nicNameInput" placeholder="조회할 유저 닉네임을 입력하세요..." required autocomplete="off" unique-id="nicname-input">
+                        </div>
+                        <button type="submit" class="search-button" id="searchBtn" unique-id="search-btn">
+                            <i class="fa-solid fa-magnifying-glass"></i> 검색
+                        </button>
+                    </form>
+                </div>
+            </header>
+
+            <div class="dashboard-body">
+                <!-- Welcome Screen (Default) -->
+                <div class="welcome-screen" id="welcomeScreen">
+                    <div class="welcome-card animate-fade-in">
+                        <i class="fa-solid fa-circle-info welcome-info-icon"></i>
+                        <h2>캐릭터 정보 분석기에 오신 것을 환영합니다!</h2>
+                        <p>M16 서버 유즈맵 <strong>FNF RPG J</strong>의 캐릭터 데이터를 파싱하여 스탯, 아이템, 가방 목록을 시각적으로 한눈에 보여줍니다.</p>
+                        
+                        <div class="instructions">
+                            <h3>사용 방법</h3>
+                            <ul>
+                                <li><i class="fa-solid fa-circle-dot"></i> 상단의 검색창에 유저의 닉네임을 입력하고 검색을 누르세요.</li>
+                                <li><i class="fa-solid fa-circle-dot"></i> 왼쪽의 랭킹 리스트에서 닉네임을 클릭하면 즉시 캐릭터 정보가 조회됩니다.</li>
+                                <li><i class="fa-solid fa-circle-dot"></i> 장비창 및 가방 슬롯의 아이템을 클릭하면 원하는 이름(한글 라벨)으로 편집하여 로컬 저장소에 저장할 수 있습니다.</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="stats-overview-mock">
+                            <div class="mock-stat-item"><i class="fa-solid fa-coins gold-color"></i> 골드 디코딩</div>
+                            <div class="mock-stat-item"><i class="fa-solid fa-tree wood-color"></i> 나무/루나 디코딩</div>
+                            <div class="mock-stat-item"><i class="fa-solid fa-briefcase"></i> 8개 가방 완전 분석</div>
+                            <div class="mock-stat-item"><i class="fa-solid fa-tags"></i> 500+종 기본 아이템 탑재</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading Spinner -->
+                <div class="loading-screen hidden" id="loadingScreen">
+                    <div class="spinner-container">
+                        <div class="spinner-glow"></div>
+                        <i class="fa-solid fa-dharmachakra fa-spin spinner-icon"></i>
+                        <p>M16 Tool에서 데이터를 불러오고 있습니다...</p>
+                    </div>
+                </div>
+
+                <!-- Error Screen -->
+                <div class="error-screen hidden" id="errorScreen">
+                    <div class="error-card">
+                        <i class="fa-solid fa-triangle-exclamation error-icon"></i>
+                        <h2 id="errorTitle">오류 발생</h2>
+                        <p id="errorMessage">데이터를 불러오는 중 문제가 발생했습니다.</p>
+                        <button class="btn-primary" onclick="resetApp()">홈으로 돌아가기</button>
+                    </div>
+                </div>
+
+                <!-- Dashboard Content (Hidden by default) -->
+                <div class="dashboard-content hidden animate-fade-in" id="dashboardContent">
+                    
+                    <!-- Character Profile Header Card -->
+                    <div class="profile-header-card">
+                        <div class="user-avatar">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <div class="profile-info">
+                            <div class="name-row">
+                                <h2 id="profileName">goodwin</h2>
+                                <span class="profile-badge">FNF RPG J PLAYER</span>
+                            </div>
+                            <p class="last-save">최종 저장일자: <span id="profileSaveDate">2026-06-03 12:13:40</span></p>
+                        </div>
+                        
+                        <!-- Slot selector tabs -->
+                        <div class="slot-selector" id="slotSelector">
+                            <!-- Dynamically populated slot buttons e.g., Slot 11, RkData -->
+                        </div>
+                    </div>
+
+                    <!-- Grid Layout for Stats & Inventory -->
+                    <div class="dashboard-grid">
+                        
+                        <!-- Stats Card -->
+                        <section class="grid-card stats-card">
+                            <div class="stats-section-header">
+                                <i class="fa-solid fa-star card-icon-gold"></i>
+                                <h3>특수 요약</h3>
+                            </div>
+                            <div class="special-stats-grid" id="specialStatsBar">
+                                <!-- Mini stat chips populated dynamically -->
+                            </div>
+                            
+                            <hr class="section-divider">
+                            
+                            <div class="stats-section-header header-small">
+                                <i class="fa-solid fa-chart-simple card-icon"></i>
+                                <h3>기본 스탯</h3>
+                            </div>
+                            <div class="stats-grid">
+                                <!-- Row 1: Currencies / General Info -->
+                                <div class="stat-box gold stat-box-sm">
+                                    <span class="stat-label">골드 (Gold)</span>
+                                    <div class="stat-value-container">
+                                        <i class="fa-solid fa-coins gold-icon"></i>
+                                        <span class="stat-value" id="statGold">0</span>
+                                    </div>
+                                </div>
+                                <div class="stat-box wood stat-box-sm">
+                                    <span class="stat-label">정수</span>
+                                    <div class="stat-value-container">
+                                        <i class="fa-solid fa-tree wood-icon"></i>
+                                        <span class="stat-value" id="statWood">0</span>
+                                    </div>
+                                </div>
+                                <div class="stat-box stat-hero-exp stat-box-sm">
+                                    <span class="stat-label">경험치 (Exp)</span>
+                                    <span class="stat-value" id="statHeroExp">0</span>
+                                </div>
+                                
+                                <!-- Row 2: Hero Attributes -->
+                                <div class="stat-box stat-str stat-box-sm">
+                                    <span class="stat-label">힘 (Str)</span>
+                                    <span class="stat-value" id="statStr">0</span>
+                                </div>
+                                <div class="stat-box stat-agi stat-box-sm">
+                                    <span class="stat-label">민첩 (Agi)</span>
+                                    <span class="stat-value" id="statAgi">0</span>
+                                </div>
+                                <div class="stat-box stat-int stat-box-sm">
+                                    <span class="stat-label">지능 (Int)</span>
+                                    <span class="stat-value" id="statInt">0</span>
+                                </div>
+
+                                <!-- Row 3: Pet Attributes -->
+                                <div class="stat-box stat-pet-agi stat-box-sm">
+                                    <span class="stat-label">펫 민첩 (Pet Agi)</span>
+                                    <span class="stat-value" id="statPetAgi">0</span>
+                                </div>
+                                <div class="stat-box stat-pet-int stat-box-sm">
+                                    <span class="stat-label">펫 지능 (Pet Int)</span>
+                                    <span class="stat-value" id="statPetInt">0</span>
+                                </div>
+                                <div class="stat-box stat-pet-exp stat-box-sm">
+                                    <span class="stat-label">펫 경험치 (Pet Exp)</span>
+                                    <span class="stat-value" id="statPetExp">0</span>
+                                </div>
+                            </div>
+                            
+                            <div class="types-container types-container-sm">
+                                <div class="type-box">
+                                    <span class="type-label">영웅 타입</span>
+                                    <div class="type-value type-value-sm">
+                                        <i class="fa-solid fa-skull-crossbones"></i>
+                                        <span id="heroTypeCode">O/o3</span>
+                                        <small id="heroTypeName">(로딩중)</small>
+                                    </div>
+                                </div>
+                                <div class="type-box">
+                                    <span class="type-label">펫 타입</span>
+                                    <div class="type-value type-value-sm">
+                                        <i class="fa-solid fa-paw"></i>
+                                        <span id="petTypeCode">O/pe</span>
+                                        <small id="petTypeName">(로딩중)</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Hero Inventory Card -->
+                        <section class="grid-card inventory-card">
+                            <div class="card-header">
+                                <i class="fa-solid fa-shield card-icon"></i>
+                                <h3>영웅 인벤토리 (Inventory)</h3>
+                            </div>
+                            
+                            <div class="inventory-grid" id="heroInventoryGrid">
+                                <!-- 6 Slots dynamically populated -->
+                            </div>
+                        </section>
+
+                    </div> <!-- End of grid -->
+
+                    <!-- Bags Section Card -->
+                    <section class="bags-section-card grid-card">
+                        <div class="card-header">
+                            <i class="fa-solid fa-briefcase card-icon"></i>
+                            <h3>확장 가방 보관함 (8 Bags)</h3>
+                        </div>
+                        
+                        <!-- Bag Tabs -->
+                        <div class="bag-tabs" id="bagTabs">
+                            <!-- Bag 1 to Bag 8 buttons -->
+                        </div>
+
+                        <!-- Selected Bag Contents Grid -->
+                        <div class="bag-inventory-container">
+                            <div class="bag-info-row">
+                                <span class="bag-badge"><i class="fa-solid fa-box-open"></i> <span id="activeBagName">가방 1</span></span>
+                                <span class="bag-rawcode">가방 고유코드: <strong id="activeBagCode">Unknown</strong></span>
+                            </div>
+                            <div class="inventory-grid inventory-grid-compact" id="bagInventoryGrid">
+                                <!-- 6 slots for active bag -->
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Raw JSON Viewer -->
+                    <section class="grid-card raw-json-card">
+                        <div class="card-header" onclick="toggleRawJson()">
+                            <div class="header-left">
+                                <i class="fa-solid fa-code card-icon"></i>
+                                <h3>원본 JSON 데이터 (Raw JSON)</h3>
+                            </div>
+                            <i class="fa-solid fa-chevron-down toggle-icon" id="jsonToggleIcon"></i>
+                        </div>
+                        <div class="raw-json-content hidden" id="rawJsonWrapper">
+                            <div class="json-actions">
+                                <button class="btn-secondary btn-sm" onclick="copyRawJson()"><i class="fa-solid fa-copy"></i> 복사하기</button>
+                            </div>
+                            <pre><code id="rawJsonCode">{}</code></pre>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit Item Modal -->
+    <div class="modal-overlay hidden" id="editModal">
+        <div class="modal-card animate-zoom-in">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-pen-to-square"></i> 아이템 라벨 편집</h3>
+                <button class="close-modal-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-field">
+                    <span class="field-label">원시 정수값</span>
+                    <strong class="field-val" id="modalRawInt">1227903796</strong>
+                </div>
+                <div class="modal-field">
+                    <span class="field-label">워크래프트 Rawcode</span>
+                    <strong class="field-val highlight" id="modalRawCode">I254</strong>
+                </div>
+                <div class="modal-field">
+                    <span class="field-label">기본 등록 명칭</span>
+                    <span class="field-val text-muted" id="modalDefaultName">올인원 [NO, 1]</span>
+                </div>
+                <div class="modal-input-group">
+                    <label for="modalCustomName">커스텀 표시 이름</label>
+                    <input type="text" id="modalCustomName" placeholder="예: 최고급 전설의 검" autocomplete="off">
+                    <p class="input-tip">이름을 비워두면 기본 등록 명칭 또는 Rawcode로 표시됩니다.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal()">취소</button>
+                <button class="btn-primary" onclick="saveCustomLabel()">저장하기</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
