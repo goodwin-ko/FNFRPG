@@ -314,12 +314,9 @@ function renderActiveSlot() {
         else if (starName.includes('블랙')) starColor = '#94a3b8';
         else if (starName.includes('화이트')) starColor = '#f8fafc';
         
-        // Find all bag items player possesses in inventory or bags (sorted by tier descending)
-        const bagItemIds = findBagItems(data);
-        let ownedBagName = '없음';
-        if (bagItemIds.length > 0) {
-            ownedBagName = bagItemIds.map(id => getItemName(id, intToRawcode(id))).join(', ');
-        }
+        // Fetch active bag from equipped Bag 6 (data.b6) as requested
+        const bagItemId = data.b6 || 0;
+        const ownedBagName = bagItemId ? getItemName(bagItemId, intToRawcode(bagItemId)) : '없음';
         
         const specialList = [
             { label: '이만강', value: cntImangang.toLocaleString(), color: '#cbd5e1' },
