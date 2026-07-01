@@ -314,22 +314,9 @@ function renderActiveSlot() {
         else if (starName.includes('블랙')) starColor = '#94a3b8';
         else if (starName.includes('화이트')) starColor = '#f8fafc';
         
-        // Fetch active bag from equipped Bag 6 (data.b6) as requested
-        const bagItemId = data.b6 || 0;
-        let ownedBagName = '없음';
-        if (bagItemId) {
-            const rawCode = intToRawcode(bagItemId);
-            const hBagNames = {
-                'h001': '◑가방-꼬마용+1',
-                'h002': '◑가방-꼬마용+2',
-                'h010': '◑가방-나후냥+3',
-                'h012': '◑가방-나후냥+5',
-                'h019': '◑가방-블랙 독',
-                'h01T': '◑가방-미미+1',
-                'h00R': '◑가방-스파이더+2'
-            };
-            ownedBagName = hBagNames[rawCode] || getItemName(bagItemId, rawCode);
-        }
+        // Find all bag items player possesses (sorted by tier descending) and show the best one
+        const bagItemIds = findBagItems(data);
+        const ownedBagName = bagItemIds.length > 0 ? getItemName(bagItemIds[0], intToRawcode(bagItemIds[0])) : '없음';
         
         const specialList = [
             { label: '이만강', value: cntImangang.toLocaleString(), color: '#cbd5e1' },
