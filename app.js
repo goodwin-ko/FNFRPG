@@ -541,6 +541,22 @@ function getItemName(rawInt, rawCode, count = 0) {
         }
         return '강화의 룬';
     }
+
+    // If the base name contains "동상" or is code 1227903800
+    if (baseName.includes('동상') || rawInt === 1227903800) {
+        const lvl = count || 0;
+        if (lvl > 0) {
+            let option = '';
+            if (lvl <= 3) {
+                option = `-수련치 +${lvl}`;
+            } else {
+                const decVal = (lvl - 3) * 500;
+                option = `-수련치 +${lvl},[-${decVal}]`;
+            }
+            return `동상[Lv.${lvl}]${option}`;
+        }
+        return '동상';
+    }
     
     return baseName;
 }
