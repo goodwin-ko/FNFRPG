@@ -91,7 +91,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 // Load rankings from backend API
 async function loadRankings() {
     try {
-        const response = await fetch('/api/rankings');
+        const response = await fetch('/api/rankings?t=' + Date.now());
         if (!response.ok) throw new Error('API response error');
         
         const ranks = await response.json();

@@ -72,7 +72,9 @@ def fetch_and_parse(nicname):
     return results
 
 def fetch_rankings():
-    url = "https://m16tool.xyz/Game/FNF%20RPG%20J/Rank/Index?board=RK"
+    import time
+    timestamp = int(time.time())
+    url = f"https://m16tool.xyz/Game/FNF%20RPG%20J/Rank/Index?board=RK&_={timestamp}"
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     }
@@ -147,6 +149,7 @@ class CustomHandler(http.server.BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
             self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
             self.end_headers()
             self.wfile.write(json.dumps(results, ensure_ascii=False).encode('utf-8'))
             return
@@ -157,6 +160,7 @@ class CustomHandler(http.server.BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
             self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
             self.end_headers()
             self.wfile.write(json.dumps(results, ensure_ascii=False).encode('utf-8'))
             return
