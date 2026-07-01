@@ -316,7 +316,20 @@ function renderActiveSlot() {
         
         // Fetch active bag from equipped Bag 6 (data.b6) as requested
         const bagItemId = data.b6 || 0;
-        const ownedBagName = bagItemId ? getItemName(bagItemId, intToRawcode(bagItemId)) : '없음';
+        let ownedBagName = '없음';
+        if (bagItemId) {
+            const rawCode = intToRawcode(bagItemId);
+            const hBagNames = {
+                'h001': '◑가방-꼬마용+1',
+                'h002': '◑가방-꼬마용+2',
+                'h010': '◑가방-나후냥+3',
+                'h012': '◑가방-나후냥+5',
+                'h019': '◑가방-블랙 독',
+                'h01T': '◑가방-미미+1',
+                'h00R': '◑가방-스파이더+2'
+            };
+            ownedBagName = hBagNames[rawCode] || getItemName(bagItemId, rawCode);
+        }
         
         const specialList = [
             { label: '이만강', value: cntImangang.toLocaleString(), color: '#cbd5e1' },
