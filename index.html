@@ -13,10 +13,19 @@
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=1.2">
+    <link rel="stylesheet" href="style.css?v=1.3">
 </head>
 <body>
-    <div class="app-container">
+    <div class="app-container show-search">
+        <!-- Mobile Tabs Navigation -->
+        <div class="mobile-tabs-header">
+            <button class="mobile-tab-btn active" id="tabBtnSearch">
+                <i class="fa-solid fa-magnifying-glass"></i> 캐릭터 조회
+            </button>
+            <button class="mobile-tab-btn" id="tabBtnRankings">
+                <i class="fa-solid fa-trophy"></i> 실시간 랭킹
+            </button>
+        </div>
         <!-- Sidebar: Rankings -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
@@ -313,6 +322,6 @@
         </div>
     </div>
     
-    <script src="app.js?v=1.2"></script>
+    <script src="app.js?v=1.3"></script>
 </body>
 </html>

@@ -86,6 +86,9 @@ window.addEventListener('DOMContentLoaded', async () => {
             searchUser(queryName);
         }
     });
+
+    // 5. Initialize Mobile Tabs
+    initMobileTabs();
 });
 
 // Load rankings from backend API
@@ -182,6 +185,12 @@ async function searchUser(nicname) {
         renderProfileHeader();
         renderSlotSelector();
         renderActiveSlot();
+        
+        // Auto-switch mobile tab to Search view
+        const tabBtnSearch = document.getElementById('tabBtnSearch');
+        if (tabBtnSearch) {
+            tabBtnSearch.click();
+        }
 
     } catch (e) {
         console.error(e);
@@ -695,36 +704,53 @@ function findItemCount(data, itemId) {
     return total;
 }
 
-// Helper to find if player possesses any of the 20 bag items in their inventory/bags
+// Helper to find if player possesses any bag items in their inventory/bags
 function findBagItem(data) {
-    const bagItemIds = [
-        1226460217, 1226460751, 1226460755, 1226460225, 1226461268,
-        1226460228, 1226462021, 1226462022, 1226460215, 1226460745,
-        1226460214, 1226460750, 1226460230, 1226460229, 1226460216,
-        1226461263, 1226460227, 1226462003, 1226460226, 1226461273
-    ];
-    
     // Check hero inventory
     for (let s = 1; s <= 6; s++) {
         const itemCode = data[`hi${s}`];
-        if (itemCode && bagItemIds.includes(itemCode)) {
-            return itemCode;
+        if (itemCode) {
+            const name = getItemName(itemCode, intToRawcode(itemCode));
+            if (name.includes('가방') && !name.includes('미등록') && !name.includes('알 수 없는')) {
+                return itemCode;
+            }
         }
     }
     // Check bags 1 to 8
     for (let b = 1; b <= 8; b++) {
         for (let s = 1; s <= 6; s++) {
-            let itemKey;
-            if (b === 1) {
-                itemKey = `bi${s}`;
-            } else {
-                itemKey = `b${b}i${s}`;
-            }
+            let itemKey = b === 1 ? `bi${s}` : `b${b}i${s}`;
             const itemCode = data[itemKey];
-            if (itemCode && bagItemIds.includes(itemCode)) {
-                return itemCode;
+            if (itemCode) {
+                const name = getItemName(itemCode, intToRawcode(itemCode));
+                if (name.includes('가방') && !name.includes('미등록') && !name.includes('알 수 없는')) {
+                    return itemCode;
+                }
             }
         }
     }
     return null;
+}
+
+// Initialize Mobile Tab click event handlers
+function initMobileTabs() {
+    const tabBtnSearch = document.getElementById('tabBtnSearch');
+    const tabBtnRankings = document.getElementById('tabBtnRankings');
+    const appContainer = document.querySelector('.app-container');
+    
+    if (!tabBtnSearch || !tabBtnRankings || !appContainer) return;
+    
+    tabBtnSearch.addEventListener('click', () => {
+        tabBtnSearch.classList.add('active');
+        tabBtnRankings.classList.remove('active');
+        appContainer.classList.remove('show-rankings');
+        appContainer.classList.add('show-search');
+    });
+    
+    tabBtnRankings.addEventListener('click', () => {
+        tabBtnRankings.classList.add('active');
+        tabBtnSearch.classList.remove('active');
+        appContainer.classList.remove('show-search');
+        appContainer.classList.add('show-rankings');
+    });
 }
