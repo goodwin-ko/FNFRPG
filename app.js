@@ -244,7 +244,7 @@ function renderActiveSlot() {
     const data = slotObj.data;
     
     // 1. Set save date
-    profileSaveDate.textContent = slotObj.date;
+    profileSaveDate.textContent = formatSaveDate(slotObj.date);
 
     // 2. Core stats
     statGold.textContent = (data.Gd || 0).toLocaleString();
@@ -583,6 +583,28 @@ function intToRawcode(value) {
     } catch (e) {
         return '';
     }
+}
+
+// Parse MM/DD/YYYY HH:MM:SS date to Korean YYYY년 MM월 DD일 HH시 MM분 SS초 format
+function formatSaveDate(dateStr) {
+    if (!dateStr) return '';
+    const regex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/;
+    const match = dateStr.match(regex);
+    if (match) {
+        const month = match[1].padStart(2, '0');
+        const day = match[2].padStart(2, '0');
+        const year = match[3];
+        const hour = match[4].padStart(2, '0');
+        const minute = match[5].padStart(2, '0');
+        const second = match[6] ? match[6].padStart(2, '0') : null;
+        
+        if (second) {
+            return `${year}년 ${month}월 ${day}일 ${hour}시 ${minute}분 ${second}초`;
+        } else {
+            return `${year}년 ${month}월 ${day}일 ${hour}시 ${minute}분`;
+        }
+    }
+    return dateStr;
 }
 
 // Screen management helper
