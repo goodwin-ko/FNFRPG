@@ -314,9 +314,12 @@ function renderActiveSlot() {
         else if (starName.includes('블랙')) starColor = '#94a3b8';
         else if (starName.includes('화이트')) starColor = '#f8fafc';
         
-        // Find if player has any of the 20 bag items in inventory or bags
-        const bagItemId = findBagItem(data);
-        const ownedBagName = bagItemId ? getItemName(bagItemId, intToRawcode(bagItemId)) : '없음';
+        // Find all bag items player possesses in inventory or bags (sorted by tier descending)
+        const bagItemIds = findBagItems(data);
+        let ownedBagName = '없음';
+        if (bagItemIds.length > 0) {
+            ownedBagName = bagItemIds.map(id => getItemName(id, intToRawcode(id))).join(', ');
+        }
         
         const specialList = [
             { label: '이만강', value: cntImangang.toLocaleString(), color: '#cbd5e1' },
@@ -704,15 +707,16 @@ function findItemCount(data, itemId) {
     return total;
 }
 
-// Helper to find if player possesses any bag items in their inventory/bags
-function findBagItem(data) {
+// Helper to find all bag items player possesses in their inventory/bags (sorted by tier descending)
+function findBagItems(data) {
+    const found = [];
     // Check hero inventory
     for (let s = 1; s <= 6; s++) {
         const itemCode = data[`hi${s}`];
         if (itemCode) {
             const name = getItemName(itemCode, intToRawcode(itemCode));
             if (name.includes('가방') && !name.includes('미등록') && !name.includes('알 수 없는')) {
-                return itemCode;
+                if (!found.includes(itemCode)) found.push(itemCode);
             }
         }
     }
@@ -724,12 +728,26 @@ function findBagItem(data) {
             if (itemCode) {
                 const name = getItemName(itemCode, intToRawcode(itemCode));
                 if (name.includes('가방') && !name.includes('미등록') && !name.includes('알 수 없는')) {
-                    return itemCode;
+                    if (!found.includes(itemCode)) found.push(itemCode);
                 }
             }
         }
     }
-    return null;
+    
+    // Sort by tier (+5, +4 etc.) descending
+    found.sort((a, b) => {
+        const nameA = getItemName(a, intToRawcode(a));
+        const nameB = getItemName(b, intToRawcode(b));
+        
+        const getTier = (name) => {
+            const match = name.match(/\+(\d+)$/);
+            return match ? parseInt(match[1]) : 0;
+        };
+        
+        return getTier(nameB) - getTier(nameA);
+    });
+    
+    return found;
 }
 
 // Initialize Mobile Tab click event handlers
