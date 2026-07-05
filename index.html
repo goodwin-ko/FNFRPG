@@ -13,7 +13,7 @@
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=1.5">
+    <link rel="stylesheet" href="style.css?v=1.6">
 </head>
 <body>
     <div class="app-container show-search">
@@ -23,32 +23,46 @@
                 <i class="fa-solid fa-magnifying-glass"></i> 캐릭터 조회
             </button>
             <button class="mobile-tab-btn" id="tabBtnRankings">
-                <i class="fa-solid fa-trophy"></i> 실시간 랭킹
+                <i class="fa-solid fa-trophy"></i> 랭킹 및 로그
             </button>
         </div>
-        <!-- Sidebar: Rankings -->
+        <!-- Sidebar: Rankings & Logs -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <i class="fa-solid fa-trophy ranking-icon"></i>
-                <h2>FNF RPG J 랭킹 (Top 30)</h2>
+                <div class="sidebar-tabs">
+                    <button class="sidebar-tab active" id="tabRankings"><i class="fa-solid fa-trophy"></i> 랭킹</button>
+                    <button class="sidebar-tab" id="tabEventLogs"><i class="fa-solid fa-list-ul"></i> 로그</button>
+                </div>
             </div>
             <div class="ranking-list-container">
-                <table class="ranking-table" id="rankingTable">
-                    <thead>
-                        <tr>
-                            <th style="width: 35%">순위</th>
-                            <th style="width: 37%">닉네임</th>
-                            <th style="width: 28%">스코어</th>
-                        </tr>
-                    </thead>
-                    <tbody id="rankingBody">
-                        <tr>
-                            <td colspan="3" class="text-center loading-text">
-                                <i class="fa-solid fa-spinner fa-spin"></i> 랭킹 불러오는 중...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <!-- Panel: Rankings -->
+                <div id="panelRankings">
+                    <table class="ranking-table" id="rankingTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 35%">순위</th>
+                                <th style="width: 37%">닉네임</th>
+                                <th style="width: 28%">스코어</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rankingBody">
+                            <tr>
+                                <td colspan="3" class="text-center loading-text">
+                                    <i class="fa-solid fa-spinner fa-spin"></i> 랭킹 불러오는 중...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Panel: Event Logs -->
+                <div id="panelEventLogs" class="hidden">
+                    <div class="event-logs-list" id="eventLogsList">
+                        <div class="text-center loading-text">
+                            <i class="fa-solid fa-spinner fa-spin"></i> 이벤트 로그 불러오는 중...
+                        </div>
+                    </div>
+                </div>
             </div>
         </aside>
 
@@ -322,6 +336,6 @@
         </div>
     </div>
     
-    <script src="app.js?v=1.5"></script>
+    <script src="app.js?v=1.6"></script>
 </body>
 </html>

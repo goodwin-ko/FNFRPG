@@ -1601,3 +1601,78 @@ body {
         padding-bottom: 4px;
     }
 }
+
+/* Sidebar Tabs for main dashboard */
+.sidebar-tabs {
+    display: flex;
+    width: 100%;
+    background: rgba(9, 9, 11, 0.6);
+    border-radius: 8px;
+    padding: 4px;
+    border: 1px solid var(--border-color);
+}
+
+.sidebar-tab {
+    flex: 1;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s;
+    font-family: var(--font-heading);
+}
+
+.sidebar-tab.active {
+    background: var(--purple);
+    color: white;
+    box-shadow: 0 2px 8px rgba(168, 85, 247, 0.4);
+}
+
+/* Event Logs Panel */
+.event-logs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 4px;
+}
+
+.event-log-item {
+    background: rgba(9, 9, 11, 0.4);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: left;
+}
+
+.event-log-item:hover {
+    background: rgba(168, 85, 247, 0.08);
+    border-color: var(--purple);
+}
+
+.event-log-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.event-log-msg {
+    color: var(--text-main);
+    word-break: break-all;
+    line-height: 1.4;
+    font-weight: 500;
+}

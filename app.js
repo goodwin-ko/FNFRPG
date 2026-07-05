@@ -75,8 +75,32 @@ window.addEventListener('DOMContentLoaded', async () => {
         console.error('Failed to load item database', e);
     }
 
-    // 3. Load Rankings
+    // 3. Load Rankings & Event Logs
     await loadRankings();
+    loadEventLogs();
+    
+    // Bind Sidebar Tabs
+    const tabRankings = document.getElementById('tabRankings');
+    const tabEventLogs = document.getElementById('tabEventLogs');
+    const panelRankings = document.getElementById('panelRankings');
+    const panelEventLogs = document.getElementById('panelEventLogs');
+    
+    if (tabRankings && tabEventLogs) {
+        tabRankings.addEventListener('click', () => {
+            tabRankings.classList.add('active');
+            tabEventLogs.classList.remove('active');
+            panelRankings.classList.remove('hidden');
+            panelEventLogs.classList.add('hidden');
+        });
+
+        tabEventLogs.addEventListener('click', () => {
+            tabEventLogs.classList.add('active');
+            tabRankings.classList.remove('active');
+            panelEventLogs.classList.remove('hidden');
+            panelRankings.classList.add('hidden');
+            loadEventLogs();
+        });
+    }
     
     // 4. Bind Search Form Submit
     searchForm.addEventListener('submit', (e) => {
@@ -157,6 +181,52 @@ async function loadRankings() {
     } catch (e) {
         console.error('Error loading rankings', e);
         rankingBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted"><i class="fa-solid fa-triangle-exclamation"></i> 불러오기 실패</td></tr>';
+    }
+}
+
+// Load Event Logs from backend API
+async function loadEventLogs() {
+    const eventLogsList = document.getElementById('eventLogsList');
+    if (!eventLogsList) return;
+    
+    try {
+        const response = await fetch('/api/eventlog?t=' + Date.now());
+        if (!response.ok) throw new Error('API response error');
+        
+        const logs = await response.json();
+        eventLogsList.innerHTML = '';
+        
+        if (logs.length === 0) {
+            eventLogsList.innerHTML = '<div class="text-center text-muted py-4">최근 이벤트 로그가 없습니다.</div>';
+            return;
+        }
+
+        logs.forEach(log => {
+            const item = document.createElement('div');
+            item.className = 'event-log-item';
+            
+            item.innerHTML = `
+                <div class="event-log-meta">
+                    <span style="font-weight:600;color:var(--purple);"><i class="fa-solid fa-clipboard-list"></i> 로그 알림</span>
+                    <span>${log.date}</span>
+                </div>
+                <div class="event-log-msg">${log.msg}</div>
+            `;
+            
+            item.addEventListener('click', () => {
+                const parts = log.msg.trim().split(/\s+/);
+                if (parts.length > 0) {
+                    const nickname = parts[0];
+                    nicNameInput.value = nickname;
+                    searchUser(nickname);
+                }
+            });
+            
+            eventLogsList.appendChild(item);
+        });
+    } catch (e) {
+        console.error('Error loading event logs', e);
+        eventLogsList.innerHTML = '<div class="text-center text-muted py-4"><i class="fa-solid fa-triangle-exclamation"></i> 불러오기 실패</div>';
     }
 }
 
