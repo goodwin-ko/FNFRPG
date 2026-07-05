@@ -118,6 +118,48 @@ def fetch_rankings():
         })
     return rankings
 
+def fetch_maplog_page(page=1):
+    import time
+    import html as html_lib
+    timestamp = int(time.time())
+    url = f"https://m16tool.xyz/Game/FNF%20RPG%20J/MapLog/Index?page={page}&_={timestamp}"
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    }
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=10) as response:
+            html_content = response.read().decode('utf-8')
+    except Exception as e:
+        print(f"Error fetching maplog page {page}: {e}")
+        return []
+        
+    table_match = re.search(r'<table class="table table-striped logtable">(.*?)</table>', html_content, re.DOTALL | re.IGNORECASE)
+    if not table_match:
+        return []
+        
+    tbody_html = table_match.group(1)
+    rows = re.findall(r'<tr>(.*?)</tr>', tbody_html, re.DOTALL | re.IGNORECASE)
+    
+    results = []
+    for r in rows:
+        tds = re.findall(r'<td>(.*?)</td>', r, re.DOTALL | re.IGNORECASE)
+        if len(tds) >= 2:
+            msg = html_lib.unescape(tds[0]).strip()
+            msg = re.sub(r'<[^>]+>', '', msg)
+            date = tds[1].strip()
+            results.append({
+                'msg': msg,
+                'date': date
+            })
+    return results
+
+def fetch_maplog():
+    results = fetch_maplog_page(1)
+    if len(results) < 30:
+        results += fetch_maplog_page(2)
+    return results[:30]
+
 class CustomHandler(http.server.BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         # Prevent spamming the console with static file requests
@@ -157,6 +199,17 @@ class CustomHandler(http.server.BaseHTTPRequestHandler):
         # API Route: /api/rankings
         if parsed_url.path == '/api/rankings':
             results = fetch_rankings()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            self.end_headers()
+            self.wfile.write(json.dumps(results, ensure_ascii=False).encode('utf-8'))
+            return
+
+        # API Route: /api/eventlog
+        if parsed_url.path == '/api/eventlog':
+            results = fetch_maplog()
             self.send_response(200)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
             self.send_header('Access-Control-Allow-Origin', '*')
