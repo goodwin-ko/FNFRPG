@@ -74,7 +74,7 @@ def fetch_and_parse(nicname):
 def fetch_rankings():
     import time
     timestamp = int(time.time())
-    url = f"https://m16tool.xyz/Game/FNF%20RPG%20J/Rank/Index?board=RK1&_={timestamp}"
+    url = f"https://m16tool.xyz/Game/FNF%20RPG%20J/Rank/Index?board=DATA&_={timestamp}"
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     }
