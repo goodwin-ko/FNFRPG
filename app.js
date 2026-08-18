@@ -346,7 +346,7 @@ function renderActiveSlot() {
     petTypeCode.textContent = petCode || 'None';
     petTypeName.textContent = getItemName(data.pet, petCode, 0);
 
-    // 3.5 Special Stats Summary Display (이만강, 수련치, VIP, 정수뱅크, 정신력, 정력, 펫, 가방)
+    // 3.5 Special Stats Summary Display (이만강, 수련치, VIP, 정수뱅크, 정신력, 정력, 별성, 펫 등급, DP[대륙], 동상, 후포, 가방)
     const specialStatsBar = document.getElementById('specialStatsBar');
     if (specialStatsBar) {
         specialStatsBar.innerHTML = '';
@@ -358,31 +358,40 @@ function renderActiveSlot() {
         const cntJeongsuBank = findItemCount(data, 1227896147);
         const cntJeonsinryeok = findItemCount(data, 1227901528);
         const cntJeongryeok = findItemCount(data, 1227903062);
+        const cntDp = findItemCount(data, 1227903799);
+        const cntStatue = findItemCount(data, 1227903800);
+        
+        // 후포 (Title/Hupo: 1227905074)
+        let cntHupo = findItemCount(data, 1227905074);
+        if (cntHupo === 0) {
+            for (let s = 1; s <= 6; s++) if (data[`hi${s}`] === 1227905074) cntHupo = 10;
+            for (let b = 1; b <= 8; b++) {
+                for (let s = 1; s <= 6; s++) {
+                    const ik = b === 1 ? `bi${s}` : `b${b}i${s}`;
+                    if (data[ik] === 1227905074) cntHupo = 10;
+                }
+            }
+        }
         
         // 별성 (Star Grade) calculation & mapping
         const cntStars = findItemCount(data, 1227903310);
-        const starMapping = {
-            "1":"노랑1","2":"노랑2","3":"노랑3","4":"노랑4","5":"노랑5",
-            "6":"녹색1","7":"녹색2","8":"녹색3","9":"녹색4","10":"녹색5",
-            "11":"핑크1","12":"핑크2","13":"핑크3","14":"핑크4","15":"핑크5",
-            "16":"레드1","17":"레드2","18":"레드3","19":"레드4","20":"레드5",
-            "21":"퍼플1","22":"퍼플2","23":"퍼플3","24":"퍼플4","25":"퍼플5",
-            "26":"블루1","27":"블루2","28":"블루3","29":"블루4","30":"블루5",
-            "31":"블랙1","32":"블랙2","33":"블랙3","34":"블랙4","35":"블랙5",
-            "36":"화이트1","37":"화이트2","38":"화이트3","39":"화이트4","40":"화이트5",
-            "41":"레인보우1","42":"레인보우2","43":"레인보우3","44":"레인보우4","45":"레인보우5"
-        };
-        const starName = starMapping[cntStars.toString()] || (cntStars > 0 ? `${cntStars}성` : '없음');
-        
-        let starColor = '#f43f5e'; // Default fallback color
-        if (starName.includes('노랑')) starColor = '#eab308';
-        else if (starName.includes('녹색')) starColor = '#22c55e';
-        else if (starName.includes('핑크')) starColor = '#ec4899';
-        else if (starName.includes('레드')) starColor = '#ef4444';
-        else if (starName.includes('퍼플')) starColor = '#a855f7';
-        else if (starName.includes('블루')) starColor = '#3b82f6';
-        else if (starName.includes('블랙')) starColor = '#94a3b8';
-        else if (starName.includes('화이트')) starColor = '#f8fafc';
+        const starInfo = getStarGradeInfo(cntStars);
+        const starName = starInfo.name;
+        const starColor = starInfo.color;
+
+        // Pet Grade calculation
+        const currentPetName = getItemName(data.pet, intToRawcode(data.pet));
+        let petGrade = 0;
+        const petNumMatch = currentPetName.match(/\[(\d+)\]/);
+        if (cntVip > 0 && (currentPetName.includes('☆') || currentPetName.includes('굳윈') || currentPetName.includes('gmal') || cntVip >= cntStars)) {
+            petGrade = cntVip;
+        } else if (petNumMatch) {
+            petGrade = parseInt(petNumMatch[1]);
+        } else if (cntStars > 0) {
+            petGrade = cntStars;
+        } else {
+            petGrade = cntVip;
+        }
         
         // Find all bag items player possesses (sorted by tier descending) and show the best one
         const bagItemIds = findBagItems(data);
@@ -396,6 +405,10 @@ function renderActiveSlot() {
             { label: '정신력', value: cntJeonsinryeok.toLocaleString(), color: '#a855f7' },
             { label: '정력', value: cntJeongryeok.toLocaleString(), color: '#ef4444' },
             { label: '별성', value: starName, color: starColor },
+            { label: '펫 등급', value: petGrade.toLocaleString(), color: '#f472b6' },
+            { label: 'DP[대륙]', value: cntDp.toLocaleString(), color: '#f97316' },
+            { label: '동상', value: cntStatue.toLocaleString(), color: '#10b981' },
+            { label: '후포', value: cntHupo.toLocaleString(), color: '#c084fc' },
             { label: '가방', value: ownedBagName, color: '#0ea5e9' }
         ];
         
@@ -431,6 +444,12 @@ function renderActiveSlot() {
 // Render tabs for 8 bags
 function renderBagTabs(data) {
     bagTabs.innerHTML = '';
+    const customBagTitles = {
+        1: '가방 아이템',
+        2: '스킬등록 NPC',
+        3: '외형변경 NPC',
+        4: '저장 창고'
+    };
     for (let b = 1; b <= 8; b++) {
         const bagKey = b === 1 ? 'b' : `b${b}`;
         const bagItemCode = data[bagKey];
@@ -439,8 +458,9 @@ function renderBagTabs(data) {
         const btn = document.createElement('button');
         btn.className = `bag-btn ${b === activeBagIndex ? 'active-bag' : ''}`;
         
+        const baseTitle = customBagTitles[b] || `${b}번 가방`;
         const bagName = getItemName(bagItemCode, intToRawcode(bagItemCode));
-        const bagDisplayName = bagItemCode ? `${b}번 가방 (${bagName})` : `${b}번 가방`;
+        const bagDisplayName = bagItemCode ? `${baseTitle} (${bagName})` : baseTitle;
         
         btn.innerHTML = `<i class="fa-solid fa-briefcase"></i> ${bagDisplayName}`;
         
@@ -463,7 +483,15 @@ function renderBagInventory(data) {
     const bagItemCode = data[bagKey] || 0;
     const bagCodeStr = intToRawcode(bagItemCode);
     
-    activeBagName.textContent = `가방 ${b} (${getItemName(bagItemCode, bagCodeStr)})`;
+    const customBagTitles = {
+        1: '가방 아이템',
+        2: '스킬등록 NPC',
+        3: '외형변경 NPC',
+        4: '저장 창고'
+    };
+    const baseTitle = customBagTitles[b] || `가방 ${b}`;
+    
+    activeBagName.textContent = `${baseTitle} (${getItemName(bagItemCode, bagCodeStr)})`;
     activeBagCode.textContent = bagItemCode ? `${bagCodeStr} (${bagItemCode})` : '비어 있음';
 
     bagInventoryGrid.innerHTML = '';
@@ -746,6 +774,43 @@ function escapeHtml(str) {
         .replace(/'/g, "&#039;");
 }
 
+// Get Star Grade Info (1~100 tiers)
+function getStarGradeInfo(count) {
+    if (!count || count <= 0) return { name: '없음', color: '#a1a1aa' };
+    
+    const tiers = [
+        { name: '노랑', color: '#eab308' },       // 1~5
+        { name: '녹색', color: '#22c55e' },       // 6~10
+        { name: '핑크', color: '#ec4899' },       // 11~15
+        { name: '레드', color: '#ef4444' },       // 16~20
+        { name: '퍼플', color: '#a855f7' },       // 21~25
+        { name: '블루', color: '#3b82f6' },       // 26~30
+        { name: '블랙', color: '#94a3b8' },       // 31~35
+        { name: '화이트', color: '#f8fafc' },     // 36~40
+        { name: '레인보우', color: '#f43f5e' },   // 41~45
+        { name: '오리진', color: '#fb923c' },     // 46~50
+        { name: '프리즘', color: '#38bdf8' },     // 51~55
+        { name: '셀레스티얼', color: '#818cf8' }, // 56~60
+        { name: '코스믹', color: '#c084fc' },     // 61~65
+        { name: '인피니티', color: '#e879f9' },   // 66~70
+        { name: '트레센던스', color: '#2dd4bf' }, // 71~75
+        { name: '오메가', color: '#fb7185' },     // 76~80
+        { name: '엑시움', color: '#facc15' },     // 81~85
+        { name: '네메시스', color: '#f87171' },   // 86~90
+        { name: '제네시스', color: '#60a5fa' },   // 91~95
+        { name: '앱솔루트', color: '#c084fc' }    // 96~100
+    ];
+    
+    const tierIdx = Math.min(Math.floor((count - 1) / 5), tiers.length - 1);
+    const subLvl = ((count - 1) % 5) + 1;
+    const tier = tiers[tierIdx];
+    
+    return {
+        name: `${tier.name}${subLvl}[${count}성]`,
+        color: tier.color
+    };
+}
+
 // Helper to find total count of a specific item in inventory & bags
 function findItemCount(data, itemId) {
     let total = 0;
@@ -777,36 +842,39 @@ function findItemCount(data, itemId) {
 // Helper to find all bag items player possesses in their inventory/bags (sorted by tier descending)
 function findBagItems(data) {
     const found = [];
-    // Check hero inventory
-    for (let s = 1; s <= 6; s++) {
-        const itemCode = data[`hi${s}`];
+    const checkAndAdd = (itemCode) => {
         if (itemCode) {
             const name = getItemName(itemCode, intToRawcode(itemCode));
-            if (name.includes('가방') && !name.includes('미등록') && !name.includes('알 수 없는')) {
+            if ((name.includes('가방') || name.includes('풀백') || name.includes('풀강') || name.includes('보물')) && !name.includes('미등록') && !name.includes('알 수 없는')) {
                 if (!found.includes(itemCode)) found.push(itemCode);
             }
         }
+    };
+    
+    // Check equipped bag skin slot (b6i1) first
+    if (data.b6i1) {
+        checkAndAdd(data.b6i1);
+    }
+
+    // Check hero inventory
+    for (let s = 1; s <= 6; s++) {
+        checkAndAdd(data[`hi${s}`]);
     }
     // Check bags 1 to 8
     for (let b = 1; b <= 8; b++) {
         for (let s = 1; s <= 6; s++) {
             let itemKey = b === 1 ? `bi${s}` : `b${b}i${s}`;
-            const itemCode = data[itemKey];
-            if (itemCode) {
-                const name = getItemName(itemCode, intToRawcode(itemCode));
-                if (name.includes('가방') && !name.includes('미등록') && !name.includes('알 수 없는')) {
-                    if (!found.includes(itemCode)) found.push(itemCode);
-                }
-            }
+            checkAndAdd(data[itemKey]);
         }
     }
     
-    // Sort by tier (+5, +4 etc.) descending
+    // Sort by tier (+5, +4 etc. or 풀백) descending
     found.sort((a, b) => {
         const nameA = getItemName(a, intToRawcode(a));
         const nameB = getItemName(b, intToRawcode(b));
         
         const getTier = (name) => {
+            if (name.includes('풀백') || name.includes('풀강')) return 100;
             const match = name.match(/\+(\d+)$/);
             return match ? parseInt(match[1]) : 0;
         };
