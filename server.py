@@ -10,6 +10,8 @@ import sys
 
 PORT = int(os.environ.get('PORT', 8000))
 
+import html as html_lib
+
 def fetch_and_parse(nicname):
     encoded_name = urllib.parse.quote(nicname)
     url = f"https://m16tool.xyz/Game/FNF%20RPG%20J/UserLog/LogResult?nicName={encoded_name}"
@@ -39,9 +41,9 @@ def fetch_and_parse(nicname):
         if len(tds) < 3:
             continue
             
-        slot_html = tds[0]
+        slot_html = html_lib.unescape(tds[0])
         slot_match = re.search(r'<a.*?>(.*?)</a>', slot_html, re.DOTALL | re.IGNORECASE)
-        slot = slot_match.group(1).strip() if slot_match else slot_html.strip()
+        slot = slot_match.group(1).strip() if slot_match else re.sub(r'<[^>]+>', '', slot_html).strip()
         
         raw_data_html = tds[1]
         data_str = raw_data_html.replace('<br>', '\n').replace('<br/>', '\n').replace('<br />', '\n')
@@ -101,19 +103,28 @@ def fetch_rankings():
             
         rank = tds[0].strip()
         
-        name_html = tds[1]
-        name_match = re.search(r'nicName=([^&"]+)', name_html)
-        if name_match:
-            nicname = urllib.parse.unquote(name_match.group(1))
+        name_html = html_lib.unescape(tds[1])
+        match = re.search(r'nicName=([^&"]+)(?:&amp;|&)character=([^&"]+)', name_html)
+        if match:
+            nicname = urllib.parse.unquote(match.group(1)).strip()
+            char = urllib.parse.unquote(match.group(2)).strip()
         else:
-            nicname_clean = re.sub(r'<[^>]+>', '', name_html).strip()
-            nicname = nicname_clean.split('(')[0].strip()
+            text_clean = re.sub(r'<[^>]+>', '', name_html).strip()
+            m_paren = re.search(r'^(.*?)\s*\((.*?)\)$', text_clean)
+            if m_paren:
+                nicname = m_paren.group(1).strip()
+                char = m_paren.group(2).strip()
+            else:
+                match_nic = re.search(r'nicName=([^&"]+)', name_html)
+                nicname = urllib.parse.unquote(match_nic.group(1)).strip() if match_nic else text_clean
+                char = '1'
             
         score = tds[2].strip()
         
         rankings.append({
             'rank': rank,
             'nicname': nicname,
+            'character': char,
             'score': score
         })
     return rankings
@@ -194,7 +205,7 @@ def parse_growth_log_entry(l):
 
 def fetch_single_player_growth(player):
     nic = player['nicname']
-    char = player.get('character', '1')
+    char = str(player.get('character', '1'))
     rank = player.get('rank', '0')
     
     url = 'https://logs2.m16tool.xyz/Game/FNF%20RPG%20J/UserLog/GetLog2'
@@ -301,16 +312,22 @@ def fetch_top30_growth():
         tds = re.findall(r'<td.*?>(.*?)</td>', r, re.DOTALL | re.IGNORECASE)
         if len(tds) >= 2:
             rank = tds[0].strip()
-            name_html = tds[1]
+            name_html = html_lib.unescape(tds[1])
             match = re.search(r'nicName=([^&"]+)(?:&amp;|&)character=([^&"]+)', name_html)
             if match:
-                nic = urllib.parse.unquote(match.group(1))
-                char = urllib.parse.unquote(match.group(2))
+                nic = urllib.parse.unquote(match.group(1)).strip()
+                char = urllib.parse.unquote(match.group(2)).strip()
                 players.append({'rank': rank, 'nicname': nic, 'character': char})
             else:
-                match_nic = re.search(r'nicName=([^&"]+)', name_html)
-                if match_nic:
-                    nic = urllib.parse.unquote(match_nic.group(1))
+                text_clean = re.sub(r'<[^>]+>', '', name_html).strip()
+                m_paren = re.search(r'^(.*?)\s*\((.*?)\)$', text_clean)
+                if m_paren:
+                    nic = m_paren.group(1).strip()
+                    char = m_paren.group(2).strip()
+                    players.append({'rank': rank, 'nicname': nic, 'character': char})
+                else:
+                    match_nic = re.search(r'nicName=([^&"]+)', name_html)
+                    nic = urllib.parse.unquote(match_nic.group(1)).strip() if match_nic else text_clean
                     players.append({'rank': rank, 'nicname': nic, 'character': '1'})
 
     with ThreadPoolExecutor(max_workers=10) as pool:
@@ -416,9 +433,9 @@ if __name__ == "__main__":
     # Ensure working directory is the folder of this script
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     
-    # Run server
+    # Run multi-threaded server
     socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("", PORT), CustomHandler) as httpd:
+    with http.server.ThreadingHTTPServer(("", PORT), CustomHandler) as httpd:
         print(f"FNF RPG J Web server running on http://localhost:{PORT}")
         try:
             httpd.serve_forever()
