@@ -158,7 +158,164 @@ def fetch_maplog():
     results = fetch_maplog_page(1)
     if len(results) < 30:
         results += fetch_maplog_page(2)
-    return results[:30]
+def parse_growth_log_entry(l):
+    log_text = l.get('Loging', '').replace('<br>', '\n')
+    date_str = l.get('CreateDate')
+    dt = None
+    if date_str:
+        try:
+            from datetime import datetime
+            dt = datetime.fromisoformat(date_str.split('.')[0].replace('Z', ''))
+        except Exception:
+            pass
+
+    stats = {
+        'imangang': 0,
+        'suryeonchi': 0,
+        'jeongsu_bank': 0,
+        'jeongsinryeok': 0,
+        'jeongryeok': 0,
+        'vip': 0
+    }
+    m = re.search(r'이만강:\s*(\d+)', log_text)
+    if m: stats['imangang'] = int(m.group(1))
+    m = re.search(r'수련치:\s*(\d+)', log_text)
+    if m: stats['suryeonchi'] = int(m.group(1))
+    m = re.search(r'정수뱅크:\s*(\d+)', log_text)
+    if m: stats['jeongsu_bank'] = int(m.group(1))
+    m = re.search(r'정신력:\s*(\d+)', log_text)
+    if m: stats['jeongsinryeok'] = int(m.group(1))
+    m = re.search(r'정력:\s*(\d+)', log_text)
+    if m: stats['jeongryeok'] = int(m.group(1))
+    m = re.search(r'VIP:\s*(\d+)', log_text)
+    if m: stats['vip'] = int(m.group(1))
+
+    return {'date': dt, 'date_str': date_str, 'stats': stats}
+
+def fetch_single_player_growth(player):
+    nic = player['nicname']
+    char = player.get('character', '1')
+    rank = player.get('rank', '0')
+    
+    url = 'https://logs2.m16tool.xyz/Game/FNF%20RPG%20J/UserLog/GetLog2'
+    data = {'nicName': nic, 'character': char, 'index': '0', 'search': '', 'Month': '2026-08'}
+    req = urllib.request.Request(url, data=urllib.parse.urlencode(data).encode('utf-8'), headers={
+        'User-Agent': 'Mozilla/5.0',
+        'Referer': f'https://m16tool.xyz/Game/FNF%20RPG%20J/UserLog/RPGDetail?nicName={urllib.parse.quote(nic)}&character={urllib.parse.quote(char)}',
+        'Origin': 'https://m16tool.xyz',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            res = json.loads(resp.read().decode('utf-8'))
+        raw_list = res.get('data', [])
+        logs = [parse_growth_log_entry(json.loads(x)) for x in raw_list]
+        logs_sorted = sorted([l for l in logs if l['date']], key=lambda x: x['date'])
+        
+        if not logs_sorted:
+            return {
+                'rank': rank, 'nicname': nic, 'character': char,
+                'status': 'no_logs', 'snapshots_count': 0, 'latest_stats': {}, 'hourly_step': {}, 'hourly_avg': {}, 'history': []
+            }
+            
+        latest_entry = logs_sorted[-1]
+        latest_stats = latest_entry['stats']
+        
+        # 1. Step Growth (between last 2 saves)
+        step_growth = {}
+        step_interval_min = 0
+        if len(logs_sorted) >= 2:
+            prev_entry = logs_sorted[-2]
+            dt_step_h = (latest_entry['date'] - prev_entry['date']).total_seconds() / 3600.0
+            step_interval_min = round(dt_step_h * 60, 1)
+            for k in ['imangang', 'suryeonchi', 'jeongsu_bank', 'jeongsinryeok', 'jeongryeok']:
+                delta = latest_stats[k] - prev_entry['stats'][k]
+                rate = round(delta / dt_step_h, 1) if dt_step_h > 0 else 0
+                step_growth[k] = {'current': latest_stats[k], 'delta': delta, 'rate_per_hour': rate}
+        else:
+            for k in ['imangang', 'suryeonchi', 'jeongsu_bank', 'jeongsinryeok', 'jeongryeok']:
+                step_growth[k] = {'current': latest_stats[k], 'delta': 0, 'rate_per_hour': 0}
+
+        # 2. Total Avg Growth (across all available logs)
+        avg_growth = {}
+        total_span_h = 0
+        if len(logs_sorted) >= 2:
+            oldest_entry = logs_sorted[0]
+            dt_total_h = (latest_entry['date'] - oldest_entry['date']).total_seconds() / 3600.0
+            total_span_h = round(dt_total_h, 2)
+            for k in ['imangang', 'suryeonchi', 'jeongsu_bank', 'jeongsinryeok', 'jeongryeok']:
+                delta_total = latest_stats[k] - oldest_entry['stats'][k]
+                rate_total = round(delta_total / dt_total_h, 1) if dt_total_h > 0 else 0
+                avg_growth[k] = {'total_delta': delta_total, 'rate_per_hour': rate_total}
+        else:
+            for k in ['imangang', 'suryeonchi', 'jeongsu_bank', 'jeongsinryeok', 'jeongryeok']:
+                avg_growth[k] = {'total_delta': 0, 'rate_per_hour': 0}
+
+        history_list = []
+        for l in logs_sorted:
+            history_list.append({
+                'date_str': l['date'].strftime('%Y-%m-%d %H:%M:%S') if l['date'] else '',
+                'stats': l['stats']
+            })
+
+        return {
+            'rank': rank,
+            'nicname': nic,
+            'character': char,
+            'status': 'ok',
+            'latest_save_date': latest_entry['date'].strftime('%Y-%m-%d %H:%M:%S') if latest_entry['date'] else '',
+            'step_interval_min': step_interval_min,
+            'total_span_h': total_span_h,
+            'snapshots_count': len(logs_sorted),
+            'latest_stats': latest_stats,
+            'hourly_step': step_growth,
+            'hourly_avg': avg_growth,
+            'history': history_list
+        }
+    except Exception as e:
+        return {
+            'rank': rank, 'nicname': nic, 'character': char,
+            'status': f'error: {str(e)}', 'snapshots_count': 0, 'latest_stats': {}, 'hourly_step': {}, 'hourly_avg': {}, 'history': []
+        }
+
+def fetch_top30_growth():
+    from concurrent.futures import ThreadPoolExecutor
+    import time
+    timestamp = int(time.time())
+    url = f"https://m16tool.xyz/Game/FNF%20RPG%20J/Rank/Index?board=DATA&_={timestamp}"
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=10) as response:
+            c = response.read().decode('utf-8')
+    except Exception:
+        return []
+
+    table_match = re.search(r'<table class="table table-bordered table-hover">.*?<tbody>(.*?)</tbody>', c, re.DOTALL | re.IGNORECASE)
+    if not table_match:
+        return []
+    rows = re.findall(r'<tr.*?>(.*?)</tr>', table_match.group(1), re.DOTALL | re.IGNORECASE)
+    
+    players = []
+    for r in rows:
+        tds = re.findall(r'<td.*?>(.*?)</td>', r, re.DOTALL | re.IGNORECASE)
+        if len(tds) >= 2:
+            rank = tds[0].strip()
+            name_html = tds[1]
+            match = re.search(r'nicName=([^&"]+)(?:&amp;|&)character=([^&"]+)', name_html)
+            if match:
+                nic = urllib.parse.unquote(match.group(1))
+                char = urllib.parse.unquote(match.group(2))
+                players.append({'rank': rank, 'nicname': nic, 'character': char})
+            else:
+                match_nic = re.search(r'nicName=([^&"]+)', name_html)
+                if match_nic:
+                    nic = urllib.parse.unquote(match_nic.group(1))
+                    players.append({'rank': rank, 'nicname': nic, 'character': '1'})
+
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        results = list(pool.map(fetch_single_player_growth, players[:30]))
+    return results
 
 class CustomHandler(http.server.BaseHTTPRequestHandler):
     def log_message(self, format, *args):
@@ -210,6 +367,17 @@ class CustomHandler(http.server.BaseHTTPRequestHandler):
         # API Route: /api/eventlog
         if parsed_url.path == '/api/eventlog':
             results = fetch_maplog()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            self.end_headers()
+            self.wfile.write(json.dumps(results, ensure_ascii=False).encode('utf-8'))
+            return
+
+        # API Route: /api/growth
+        if parsed_url.path == '/api/growth':
+            results = fetch_top30_growth()
             self.send_response(200)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
             self.send_header('Access-Control-Allow-Origin', '*')
