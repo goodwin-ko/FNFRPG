@@ -664,6 +664,18 @@ function getItemName(rawInt, rawCode, count = 0) {
         }
         return '동상';
     }
+
+    // If the base name contains "악세"
+    if (baseName.includes('악세')) {
+        if (count && count > 0) {
+            return `악세[Lv.${count}]`;
+        }
+        const match = baseName.match(/\[(?:Lv\.)?(\d+)\]/);
+        if (match) {
+            return `악세[Lv.${match[1]}]`;
+        }
+        return baseName;
+    }
     
     return baseName;
 }
