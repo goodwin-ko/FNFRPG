@@ -845,7 +845,7 @@ function findBagItems(data) {
     const checkAndAdd = (itemCode) => {
         if (itemCode) {
             const name = getItemName(itemCode, intToRawcode(itemCode));
-            if ((name.includes('가방') || name.includes('풀백') || name.includes('풀강') || name.includes('보물')) && !name.includes('미등록') && !name.includes('알 수 없는')) {
+            if ((name.includes('가방') || name.includes('풀백') || name.includes('루미') || name.includes('풀강') || name.includes('보물')) && !name.includes('미등록') && !name.includes('알 수 없는')) {
                 if (!found.includes(itemCode)) found.push(itemCode);
             }
         }

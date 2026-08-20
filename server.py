@@ -169,6 +169,8 @@ def fetch_maplog():
     results = fetch_maplog_page(1)
     if len(results) < 30:
         results += fetch_maplog_page(2)
+    return results[:30]
+
 def parse_growth_log_entry(l):
     log_text = l.get('Loging', '').replace('<br>', '\n')
     date_str = l.get('CreateDate')
