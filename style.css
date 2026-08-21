@@ -672,6 +672,12 @@ body {
     margin-bottom: 32px;
 }
 
+.right-inventories-column {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
 /* General Grid Card */
 .grid-card {
     background: var(--bg-card);

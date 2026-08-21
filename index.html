@@ -244,17 +244,32 @@
                             </div>
                         </section>
 
-                        <!-- Hero Inventory Card -->
-                        <section class="grid-card inventory-card">
-                            <div class="card-header">
-                                <i class="fa-solid fa-shield card-icon"></i>
-                                <h3>영웅 인벤토리 (Inventory)</h3>
-                            </div>
-                            
-                            <div class="inventory-grid" id="heroInventoryGrid">
-                                <!-- 6 Slots dynamically populated -->
-                            </div>
-                        </section>
+                        <!-- Right Column: Inventories Column -->
+                        <div class="right-inventories-column">
+                            <!-- Hero Inventory Card -->
+                            <section class="grid-card inventory-card">
+                                <div class="card-header">
+                                    <i class="fa-solid fa-shield card-icon"></i>
+                                    <h3>영웅 인벤토리 (Hero Inventory)</h3>
+                                </div>
+                                
+                                <div class="inventory-grid" id="heroInventoryGrid">
+                                    <!-- 6 Slots dynamically populated -->
+                                </div>
+                            </section>
+
+                            <!-- Bag Inventory Card (Directly Below Hero Inventory) -->
+                            <section class="grid-card inventory-card bag-quick-card">
+                                <div class="card-header">
+                                    <i class="fa-solid fa-bag-shopping card-icon"></i>
+                                    <h3>가방 인벤토리 (Bag Inventory)</h3>
+                                </div>
+                                
+                                <div class="inventory-grid" id="bag1InventoryGrid">
+                                    <!-- 6 Slots dynamically populated -->
+                                </div>
+                            </section>
+                        </div>
 
                     </div> <!-- End of grid -->
 
@@ -336,6 +351,6 @@
         </div>
     </div>
     
-    <script src="app.js?v=1.8"></script>
+    <script src="app.js?v=1.9"></script>
 </body>
 </html>

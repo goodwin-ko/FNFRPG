@@ -446,6 +446,19 @@ function renderActiveSlot() {
         heroInventoryGrid.appendChild(slotEl);
     }
 
+    // 4.5 Bag 1 Inventory Slots (6 slots right below Hero Inventory)
+    const bag1InventoryGrid = document.getElementById('bag1InventoryGrid');
+    if (bag1InventoryGrid) {
+        bag1InventoryGrid.innerHTML = '';
+        for (let s = 1; s <= 6; s++) {
+            const itemCode = data[`bi${s}`] || 0;
+            const itemCount = data[`b1${s}c`] || data[`b${s}c`] || 0;
+            
+            const slotEl = createInventorySlotElement(s, itemCode, itemCount, 'bag-1');
+            bag1InventoryGrid.appendChild(slotEl);
+        }
+    }
+
     // 5. Bag Tabs & Inventory (8 bags)
     renderBagTabs(data);
     renderBagInventory(data);
