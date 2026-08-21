@@ -351,6 +351,8 @@ function renderActiveSlot() {
     if (specialStatsBar) {
         specialStatsBar.innerHTML = '';
         
+        const logStats = slotObj.log_stats || {};
+
         // Find counts
         const cntImangang = findItemCount(data, 1227895602);
         const cntSuryeonchi = findItemCount(data, 776548403);
@@ -358,39 +360,50 @@ function renderActiveSlot() {
         const cntJeongsuBank = findItemCount(data, 1227896147);
         const cntJeonsinryeok = findItemCount(data, 1227901528);
         const cntJeongryeok = findItemCount(data, 1227903062);
-        const cntDp = findItemCount(data, 1227903799);
-        const cntStatue = findItemCount(data, 1227903800);
+        const cntDp = (logStats.dp !== undefined) ? logStats.dp : findItemCount(data, 1227903799);
+        const cntStatue = (logStats.statue !== undefined) ? logStats.statue : findItemCount(data, 1227903800);
         
-        // 후포 (Title/Hupo: 1227905074)
-        let cntHupo = findItemCount(data, 1227905074);
-        if (cntHupo === 0) {
-            for (let s = 1; s <= 6; s++) if (data[`hi${s}`] === 1227905074) cntHupo = 10;
-            for (let b = 1; b <= 8; b++) {
-                for (let s = 1; s <= 6; s++) {
-                    const ik = b === 1 ? `bi${s}` : `b${b}i${s}`;
-                    if (data[ik] === 1227905074) cntHupo = 10;
+        // 후포 (Title/Hupo: Log parsing priority)
+        let cntHupo = 0;
+        if (logStats.hupo !== undefined) {
+            cntHupo = logStats.hupo;
+        } else if (data.log_hupo !== undefined) {
+            cntHupo = data.log_hupo;
+        } else {
+            cntHupo = findItemCount(data, 1227905074);
+            if (cntHupo === 0) {
+                for (let s = 1; s <= 6; s++) if (data[`hi${s}`] === 1227905074) cntHupo = 10;
+                for (let b = 1; b <= 8; b++) {
+                    for (let s = 1; s <= 6; s++) {
+                        const ik = b === 1 ? `bi${s}` : `b${b}i${s}`;
+                        if (data[ik] === 1227905074) cntHupo = 10;
+                    }
                 }
             }
         }
         
         // 별성 (Star Grade) calculation & mapping
-        const cntStars = findItemCount(data, 1227903310);
+        const cntStars = (logStats.stars !== undefined) ? logStats.stars : findItemCount(data, 1227903310);
         const starInfo = getStarGradeInfo(cntStars);
         const starName = starInfo.name;
         const starColor = starInfo.color;
 
         // Pet Grade calculation
-        const currentPetName = getItemName(data.pet, intToRawcode(data.pet));
         let petGrade = 0;
-        const petNumMatch = currentPetName.match(/\[(\d+)\]/);
-        if (cntVip > 0 && (currentPetName.includes('☆') || currentPetName.includes('굳윈') || currentPetName.includes('gmal') || cntVip >= cntStars)) {
-            petGrade = cntVip;
-        } else if (petNumMatch) {
-            petGrade = parseInt(petNumMatch[1]);
-        } else if (cntStars > 0) {
-            petGrade = cntStars;
+        if (logStats.pet_grade !== undefined) {
+            petGrade = logStats.pet_grade;
         } else {
-            petGrade = cntVip;
+            const currentPetName = getItemName(data.pet, intToRawcode(data.pet));
+            const petNumMatch = currentPetName.match(/\[(\d+)\]/);
+            if (cntVip > 0 && (currentPetName.includes('☆') || currentPetName.includes('굳윈') || currentPetName.includes('gmal') || cntVip >= cntStars)) {
+                petGrade = cntVip;
+            } else if (petNumMatch) {
+                petGrade = parseInt(petNumMatch[1]);
+            } else if (cntStars > 0) {
+                petGrade = cntStars;
+            } else {
+                petGrade = cntVip;
+            }
         }
         
         // Find all bag items player possesses (sorted by tier descending) and show the best one

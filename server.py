@@ -12,6 +12,49 @@ PORT = int(os.environ.get('PORT', 8000))
 
 import html as html_lib
 
+def clean_wc3(t):
+    if not t: return ''
+    t = re.sub(r'\|[cC][0-9a-fA-F]{8}', '', t)
+    t = re.sub(r'\|[rR]', '', t)
+    return t.strip()
+
+def fetch_latest_log_stats(nicname, char):
+    url_logs = 'https://logs2.m16tool.xyz/Game/FNF%20RPG%20J/UserLog/GetLog2'
+    data = {'nicName': nicname, 'character': str(char), 'index': '0', 'search': '', 'Month': '2026-08'}
+    req = urllib.request.Request(url_logs, data=urllib.parse.urlencode(data).encode('utf-8'), headers={
+        'User-Agent': 'Mozilla/5.0',
+        'Referer': f'https://m16tool.xyz/Game/FNF%20RPG%20J/UserLog/RPGDetail?nicName={urllib.parse.quote(nicname)}&character={urllib.parse.quote(str(char))}',
+        'Origin': 'https://m16tool.xyz',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            res = json.loads(resp.read().decode('utf-8'))
+        raw_list = res.get('data', [])
+        if not raw_list: return {}
+        l0 = json.loads(raw_list[0])
+        log_text = clean_wc3(l0.get('Loging', '')).replace('<br>', '\n')
+        
+        stats = {}
+        m_hupo = re.search(r'후포:\s*(\d+)', log_text)
+        if m_hupo: stats['hupo'] = int(m_hupo.group(1))
+        
+        m_pet = re.search(r'펫 등급:\s*(\d+)', log_text)
+        if m_pet: stats['pet_grade'] = int(m_pet.group(1))
+        
+        m_dp = re.search(r'DP\[대륙\]:\s*(\d+)', log_text)
+        if m_dp: stats['dp'] = int(m_dp.group(1))
+
+        m_statue = re.search(r'동상:\s*(\d+)', log_text)
+        if m_statue: stats['statue'] = int(m_statue.group(1))
+
+        m_stars = re.search(r'별성단계\[.*?\]:\s*(\d+)', log_text)
+        if m_stars: stats['stars'] = int(m_stars.group(1))
+
+        return stats
+    except Exception:
+        return {}
+
 def fetch_and_parse(nicname):
     encoded_name = urllib.parse.quote(nicname)
     url = f"https://m16tool.xyz/Game/FNF%20RPG%20J/UserLog/LogResult?nicName={encoded_name}"
@@ -65,10 +108,20 @@ def fetch_and_parse(nicname):
                     
         date_str = tds[-1].strip()
         
+        # Fetch exact real-time log stats for this slot
+        log_stats = fetch_latest_log_stats(nicname, slot)
+        if log_stats:
+            if 'hupo' in log_stats: parsed_data['log_hupo'] = log_stats['hupo']
+            if 'pet_grade' in log_stats: parsed_data['log_pet_grade'] = log_stats['pet_grade']
+            if 'dp' in log_stats: parsed_data['log_dp'] = log_stats['dp']
+            if 'statue' in log_stats: parsed_data['log_statue'] = log_stats['statue']
+            if 'stars' in log_stats: parsed_data['log_stars'] = log_stats['stars']
+
         results.append({
             'slot': slot,
             'data': parsed_data,
-            'date': date_str
+            'date': date_str,
+            'log_stats': log_stats
         })
         
     return results
