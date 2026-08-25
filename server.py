@@ -126,10 +126,10 @@ def fetch_and_parse(nicname):
         
     return results
 
-def fetch_rankings():
+def fetch_rankings_page(page=1):
     import time
     timestamp = int(time.time())
-    url = f"https://m16tool.xyz/Game/FNF%20RPG%20J/Rank/Index?board=DATA&_={timestamp}"
+    url = f"https://m16tool.xyz/Game/FNF%20RPG%20J/Rank/Index?board=FUN&index={page}&_={timestamp}"
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     }
@@ -138,7 +138,7 @@ def fetch_rankings():
         with urllib.request.urlopen(req, timeout=10) as response:
             html = response.read().decode('utf-8')
     except Exception as e:
-        print(f"Error fetching rankings: {e}")
+        print(f"Error fetching rankings page {page}: {e}")
         return []
         
     table_match = re.search(r'<table class="table table-bordered table-hover">.*?<tbody>(.*?)</tbody>', html, re.DOTALL | re.IGNORECASE)
@@ -155,6 +155,8 @@ def fetch_rankings():
             continue
             
         rank = tds[0].strip()
+        if not rank.isdigit():
+            continue
         
         name_html = html_lib.unescape(tds[1])
         match = re.search(r'nicName=([^&"]+)(?:&amp;|&)character=([^&"]+)', name_html)
@@ -181,6 +183,28 @@ def fetch_rankings():
             'score': score
         })
     return rankings
+
+def fetch_rankings(limit=100):
+    all_rankings = []
+    seen = set()
+    page = 1
+    while len(all_rankings) < limit and page <= 10:
+        p_ranks = fetch_rankings_page(page)
+        if not p_ranks:
+            break
+        new_added = 0
+        for r in p_ranks:
+            key = (r['nicname'], r['character'])
+            if key not in seen:
+                seen.add(key)
+                all_rankings.append(r)
+                new_added += 1
+                if len(all_rankings) >= limit:
+                    break
+        if new_added == 0 or len(p_ranks) < 5:
+            break
+        page += 1
+    return all_rankings[:limit]
 
 def fetch_maplog_page(page=1):
     import time
@@ -346,47 +370,11 @@ def fetch_single_player_growth(player):
 
 def fetch_top30_growth():
     from concurrent.futures import ThreadPoolExecutor
-    import time
-    timestamp = int(time.time())
-    url = f"https://m16tool.xyz/Game/FNF%20RPG%20J/Rank/Index?board=DATA&_={timestamp}"
-    headers = {'User-Agent': 'Mozilla/5.0'}
-    req = urllib.request.Request(url, headers=headers)
-    try:
-        with urllib.request.urlopen(req, timeout=10) as response:
-            c = response.read().decode('utf-8')
-    except Exception:
-        return []
-
-    table_match = re.search(r'<table class="table table-bordered table-hover">.*?<tbody>(.*?)</tbody>', c, re.DOTALL | re.IGNORECASE)
-    if not table_match:
-        return []
-    rows = re.findall(r'<tr.*?>(.*?)</tr>', table_match.group(1), re.DOTALL | re.IGNORECASE)
-    
-    players = []
-    for r in rows:
-        tds = re.findall(r'<td.*?>(.*?)</td>', r, re.DOTALL | re.IGNORECASE)
-        if len(tds) >= 2:
-            rank = tds[0].strip()
-            name_html = html_lib.unescape(tds[1])
-            match = re.search(r'nicName=([^&"]+)(?:&amp;|&)character=([^&"]+)', name_html)
-            if match:
-                nic = urllib.parse.unquote(match.group(1)).strip()
-                char = urllib.parse.unquote(match.group(2)).strip()
-                players.append({'rank': rank, 'nicname': nic, 'character': char})
-            else:
-                text_clean = re.sub(r'<[^>]+>', '', name_html).strip()
-                m_paren = re.search(r'^(.*?)\s*\((.*?)\)$', text_clean)
-                if m_paren:
-                    nic = m_paren.group(1).strip()
-                    char = m_paren.group(2).strip()
-                    players.append({'rank': rank, 'nicname': nic, 'character': char})
-                else:
-                    match_nic = re.search(r'nicName=([^&"]+)', name_html)
-                    nic = urllib.parse.unquote(match_nic.group(1)).strip() if match_nic else text_clean
-                    players.append({'rank': rank, 'nicname': nic, 'character': '1'})
+    rankings = fetch_rankings(limit=30)
+    players = [{'rank': r['rank'], 'nicname': r['nicname'], 'character': r['character']} for r in rankings]
 
     with ThreadPoolExecutor(max_workers=10) as pool:
-        results = list(pool.map(fetch_single_player_growth, players[:30]))
+        results = list(pool.map(fetch_single_player_growth, players))
     return results
 
 class CustomHandler(http.server.BaseHTTPRequestHandler):

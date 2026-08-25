@@ -49,9 +49,9 @@ def normalize_item_name(iname, count=0):
 def get_all_ranking_players():
     all_users = []
     seen = set()
-    for page in range(1, 4):
+    for page in range(1, 11):
         timestamp = int(time.time())
-        url = f"https://m16tool.xyz/Game/FNF%20RPG%20J/Rank/index?index={page}&board=DATA&_={timestamp}"
+        url = f"https://m16tool.xyz/Game/FNF%20RPG%20J/Rank/index?index={page}&board=FUN&_={timestamp}"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         try:
             with urllib.request.urlopen(req, timeout=10) as resp:
@@ -59,9 +59,12 @@ def get_all_ranking_players():
             table_match = re.search(r'<table class="table table-bordered table-hover">.*?<tbody>(.*?)</tbody>', content, re.DOTALL | re.IGNORECASE)
             if not table_match: continue
             rows = re.findall(r'<tr.*?>(.*?)</tr>', table_match.group(1), re.DOTALL | re.IGNORECASE)
+            page_added = 0
             for r in rows:
                 tds = re.findall(r'<td.*?>(.*?)</td>', r, re.DOTALL | re.IGNORECASE)
                 if len(tds) >= 2:
+                    if not tds[0].strip().isdigit():
+                        continue
                     name_html = tds[1]
                     match = re.search(r'nicName=([^&"]+)(?:&amp;|&)character=([^&"]+)', name_html)
                     if match:
@@ -70,6 +73,7 @@ def get_all_ranking_players():
                         if (nic, char) not in seen:
                             seen.add((nic, char))
                             all_users.append((nic, char))
+                            page_added += 1
                     else:
                         match_nic = re.search(r'nicName=([^&"]+)', name_html)
                         if match_nic:
@@ -77,6 +81,9 @@ def get_all_ranking_players():
                             if (nic, '1') not in seen:
                                 seen.add((nic, '1'))
                                 all_users.append((nic, '1'))
+                                page_added += 1
+            if page_added == 0 or len(rows) < 5:
+                break
         except Exception as e:
             print(f"Error page {page}: {e}")
     return all_users
