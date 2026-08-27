@@ -13,7 +13,7 @@
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=1.7">
+    <link rel="stylesheet" href="style.css?v=2.0">
 </head>
 <body>
     <div class="app-container show-search">
@@ -75,16 +75,30 @@
                     <h1 class="logo-title">캐릭터 정보 분석기</h1>
                 </div>
                 
-                <div class="search-box-container">
-                    <form id="searchForm" class="search-form">
-                        <div class="search-input-wrapper">
-                            <i class="fa-solid fa-user search-user-icon"></i>
-                            <input type="text" id="nicNameInput" placeholder="조회할 유저 닉네임을 입력하세요..." required autocomplete="off" unique-id="nicname-input">
-                        </div>
-                        <button type="submit" class="search-button" id="searchBtn" unique-id="search-btn">
-                            <i class="fa-solid fa-magnifying-glass"></i> 검색
-                        </button>
-                    </form>
+                <div class="header-right-group">
+                    <!-- Quick External Links -->
+                    <div class="external-links-group">
+                        <a href="https://cafe.naver.com/fnfrpg" target="_blank" rel="noopener noreferrer" class="ext-link-btn cafe-btn" title="FNF RPG 공식 네이버 카페 바로가기">
+                            <i class="fa-solid fa-mug-hot"></i>
+                            <span>공식 카페</span>
+                        </a>
+                        <a href="https://m16tool.xyz/Game/FNF%20RPG%20J/Main/Main" target="_blank" rel="noopener noreferrer" class="ext-link-btn m16-btn" title="M16 툴 공식 사이트 바로가기">
+                            <i class="fa-solid fa-screwdriver-wrench"></i>
+                            <span>M16 툴</span>
+                        </a>
+                    </div>
+
+                    <div class="search-box-container">
+                        <form id="searchForm" class="search-form">
+                            <div class="search-input-wrapper">
+                                <i class="fa-solid fa-user search-user-icon"></i>
+                                <input type="text" id="nicNameInput" placeholder="조회할 유저 닉네임을 입력하세요..." required autocomplete="off" unique-id="nicname-input">
+                            </div>
+                            <button type="submit" class="search-button" id="searchBtn" unique-id="search-btn">
+                                <i class="fa-solid fa-magnifying-glass"></i> 검색
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </header>
 

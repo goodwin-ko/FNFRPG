@@ -406,9 +406,23 @@ function renderActiveSlot() {
             }
         }
         
-        // Find all bag items player possesses (sorted by tier descending) and show the best one
-        const bagItemIds = findBagItems(data);
-        const ownedBagName = bagItemIds.length > 0 ? getItemName(bagItemIds[0], intToRawcode(bagItemIds[0])) : '없음';
+        // 요정 레벨 (Fairy Level: 1227903044 or log priority)
+        const cntFairy = (logStats.fairy_level !== undefined) 
+            ? logStats.fairy_level 
+            : (data.log_fairy_level !== undefined ? data.log_fairy_level : findItemCount(data, 1227903044));
+
+        // Find bag skin (log priority, else check equipped b6i1 slot, else 없음)
+        let ownedBagName = '없음';
+        if (logStats.bag_skin && logStats.bag_skin !== '없음' && !logStats.bag_skin.startsWith('영웅') && !logStats.bag_skin.startsWith('(')) {
+            ownedBagName = logStats.bag_skin;
+        } else if (data.log_bag_skin && data.log_bag_skin !== '없음' && !data.log_bag_skin.startsWith('영웅') && !data.log_bag_skin.startsWith('(')) {
+            ownedBagName = data.log_bag_skin;
+        } else if (data.b6i1) {
+            const b6Name = getItemName(data.b6i1, intToRawcode(data.b6i1));
+            if ((b6Name.includes('가방') || b6Name.includes('풀백') || b6Name.includes('루미') || b6Name.includes('풀강') || b6Name.includes('보물')) && !b6Name.includes('미등록') && !b6Name.includes('알 수 없는') && !b6Name.startsWith('(')) {
+                ownedBagName = b6Name;
+            }
+        }
         
         const specialList = [
             { label: '이만강', value: cntImangang.toLocaleString(), color: '#cbd5e1' },
@@ -419,6 +433,7 @@ function renderActiveSlot() {
             { label: '정력', value: cntJeongryeok.toLocaleString(), color: '#ef4444' },
             { label: '별성', value: starName, color: starColor },
             { label: '펫 등급', value: petGrade.toLocaleString(), color: '#f472b6' },
+            { label: '요정 레벨', value: cntFairy.toLocaleString(), color: '#818cf8' },
             { label: 'DP[대륙]', value: cntDp.toLocaleString(), color: '#f97316' },
             { label: '동상', value: cntStatue.toLocaleString(), color: '#10b981' },
             { label: '후포', value: cntHupo.toLocaleString(), color: '#c084fc' },
@@ -473,8 +488,8 @@ function renderBagTabs(data) {
     const customBagTitles = {
         1: '가방 아이템',
         2: '스킬등록 NPC',
-        3: '외형변경 NPC',
-        4: '저장 창고'
+        3: '외형등록 NPC',
+        4: '저장창고'
     };
     for (let b = 1; b <= 8; b++) {
         const bagKey = b === 1 ? 'b' : `b${b}`;
@@ -512,8 +527,8 @@ function renderBagInventory(data) {
     const customBagTitles = {
         1: '가방 아이템',
         2: '스킬등록 NPC',
-        3: '외형변경 NPC',
-        4: '저장 창고'
+        3: '외형등록 NPC',
+        4: '저장창고'
     };
     const baseTitle = customBagTitles[b] || `가방 ${b}`;
     

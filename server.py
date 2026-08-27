@@ -51,6 +51,19 @@ def fetch_latest_log_stats(nicname, char):
         m_stars = re.search(r'별성단계\[.*?\]:\s*(\d+)', log_text)
         if m_stars: stats['stars'] = int(m_stars.group(1))
 
+        m_fairy = re.search(r'요정\s*레벨:\s*(\d+)', log_text)
+        if m_fairy: stats['fairy_level'] = int(m_fairy.group(1))
+
+        m_bag = re.search(r'가방[^\S\r\n]*외형:[^\S\r\n]*([^\r\n]*)', log_text)
+        if m_bag:
+            val = m_bag.group(1).strip()
+            if val and not val.startswith('영웅') and not val.startswith('(') and val != '없음':
+                stats['bag_skin'] = val
+            else:
+                stats['bag_skin'] = '없음'
+        else:
+            stats['bag_skin'] = '없음'
+
         return stats
     except Exception:
         return {}
@@ -116,6 +129,8 @@ def fetch_and_parse(nicname):
             if 'dp' in log_stats: parsed_data['log_dp'] = log_stats['dp']
             if 'statue' in log_stats: parsed_data['log_statue'] = log_stats['statue']
             if 'stars' in log_stats: parsed_data['log_stars'] = log_stats['stars']
+            if 'fairy_level' in log_stats: parsed_data['log_fairy_level'] = log_stats['fairy_level']
+            if 'bag_skin' in log_stats: parsed_data['log_bag_skin'] = log_stats['bag_skin']
 
         results.append({
             'slot': slot,
