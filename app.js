@@ -717,6 +717,18 @@ function getItemName(rawInt, rawCode, count = 0) {
         }
         return baseName;
     }
+
+    // If the base name contains "인피니티" (excluding 조합석)
+    if (baseName.includes('인피니티') && !baseName.includes('조합석') && !baseName.includes('별성')) {
+        if (count && count > 0) {
+            return `인피니티[${count}]`;
+        }
+        const match = baseName.match(/\[(\d+)\]/);
+        if (match) {
+            return `인피니티[${match[1]}]`;
+        }
+        return baseName;
+    }
     
     return baseName;
 }
