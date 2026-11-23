@@ -7,6 +7,9 @@ import re
 import os
 import mimetypes
 import sys
+import time
+import threading
+import concurrent.futures
 
 PORT = int(os.environ.get('PORT', 8000))
 
@@ -19,18 +22,33 @@ def clean_wc3(t):
     return t.strip()
 
 def fetch_latest_log_stats(nicname, char):
+    from datetime import datetime, timedelta
+    now = datetime.now()
+    months_to_try = [
+        now.strftime('%Y-%m'),
+        (now.replace(day=1) - timedelta(days=1)).strftime('%Y-%m')
+    ]
     url_logs = 'https://logs2.m16tool.xyz/Game/FNF%20RPG%20J/UserLog/GetLog2'
-    data = {'nicName': nicname, 'character': str(char), 'index': '0', 'search': '', 'Month': '2026-08'}
-    req = urllib.request.Request(url_logs, data=urllib.parse.urlencode(data).encode('utf-8'), headers={
-        'User-Agent': 'Mozilla/5.0',
-        'Referer': f'https://m16tool.xyz/Game/FNF%20RPG%20J/UserLog/RPGDetail?nicName={urllib.parse.quote(nicname)}&character={urllib.parse.quote(str(char))}',
-        'Origin': 'https://m16tool.xyz',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-    })
+    
+    raw_list = []
+    for m_str in months_to_try:
+        data = {'nicName': nicname, 'character': str(char), 'index': '0', 'search': '', 'Month': m_str}
+        req = urllib.request.Request(url_logs, data=urllib.parse.urlencode(data).encode('utf-8'), headers={
+            'User-Agent': 'Mozilla/5.0',
+            'Referer': f'https://m16tool.xyz/Game/FNF%20RPG%20J/UserLog/RPGDetail?nicName={urllib.parse.quote(nicname)}&character={urllib.parse.quote(str(char))}',
+            'Origin': 'https://m16tool.xyz',
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+        })
+        try:
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                res = json.loads(resp.read().decode('utf-8'))
+            raw_list = res.get('data', [])
+            if raw_list:
+                break
+        except Exception:
+            continue
+            
     try:
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            res = json.loads(resp.read().decode('utf-8'))
-        raw_list = res.get('data', [])
         if not raw_list: return {}
         l0 = json.loads(raw_list[0])
         log_text = clean_wc3(l0.get('Loging', '')).replace('<br>', '\n')
@@ -53,6 +71,12 @@ def fetch_latest_log_stats(nicname, char):
 
         m_fairy = re.search(r'요정\s*레벨:\s*(\d+)', log_text)
         if m_fairy: stats['fairy_level'] = int(m_fairy.group(1))
+
+        m_coin = re.search(r'정수코인:\s*(\d+)', log_text)
+        if m_coin: stats['coin'] = int(m_coin.group(1))
+
+        m_tower = re.search(r'무한의\s*탑:\s*(\d+)층', log_text)
+        if m_tower: stats['tower_floor'] = int(m_tower.group(1))
 
         m_bag = re.search(r'가방[^\S\r\n]*외형:[^\S\r\n]*([^\r\n]*)', log_text)
         if m_bag:
@@ -199,27 +223,114 @@ def fetch_rankings_page(page=1):
         })
     return rankings
 
-def fetch_rankings(limit=100):
-    all_rankings = []
-    seen = set()
-    page = 1
-    while len(all_rankings) < limit and page <= 10:
-        p_ranks = fetch_rankings_page(page)
-        if not p_ranks:
-            break
-        new_added = 0
-        for r in p_ranks:
-            key = (r['nicname'], r['character'])
-            if key not in seen:
-                seen.add(key)
-                all_rankings.append(r)
-                new_added += 1
-                if len(all_rankings) >= limit:
-                    break
-        if new_added == 0 or len(p_ranks) < 5:
-            break
-        page += 1
-    return all_rankings[:limit]
+RANKINGS_CACHE = {'data': None, 'time': 0, 'lock': threading.Lock()}
+RANKINGS_CACHE_TTL = 300  # 5 minutes
+
+def fetch_user_quick_stats(nicname, target_char='FUN'):
+    encoded_name = urllib.parse.quote(nicname)
+    url = f"https://m16tool.xyz/Game/FNF%20RPG%20J/UserLog/LogResult?nicName={encoded_name}"
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    try:
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            html_content = resp.read().decode('utf-8')
+        tbody_match = re.search(r'<tbody>(.*?)</tbody>', html_content, re.DOTALL | re.IGNORECASE)
+        if not tbody_match:
+            return {}
+        rows = re.findall(r'<tr>(.*?)</tr>', tbody_match.group(1), re.DOTALL | re.IGNORECASE)
+        fallback_data = None
+        for row in rows:
+            tds = re.findall(r'<td.*?>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
+            if len(tds) < 3:
+                continue
+            slot_html = html_lib.unescape(tds[0])
+            slot_match = re.search(r'<a.*?>(.*?)</a>', slot_html, re.DOTALL | re.IGNORECASE)
+            slot = slot_match.group(1).strip() if slot_match else re.sub(r'<[^>]+>', '', slot_html).strip()
+
+            data_str = tds[1].replace('<br>', '\n').replace('<br/>', '\n').replace('<br />', '\n').strip()
+            if not data_str.startswith('{'):
+                data_str = '{' + data_str + '}'
+            try:
+                parsed = json.loads(data_str)
+            except Exception:
+                kv = re.findall(r'"([^"]+)":\s*(?:"([^"]*)"|(-?\d+))', data_str)
+                parsed = {k: (vs if vs else int(vn)) for k, vs, vn in kv}
+
+            if fallback_data is None:
+                fallback_data = parsed
+            if slot == target_char or slot == 'FUN' or 'pVIP' in parsed:
+                return {
+                    'vip': parsed.get('pVIP', 0),
+                    'suryeon': parsed.get('pSooryun', 0),
+                    'bank': parsed.get('pBank', 0),
+                    'power': parsed.get('pPower', 0),
+                    'statue': parsed.get('pStatue', 0),
+                    'fairy': parsed.get('pFairy', 0),
+                    'pet': parsed.get('pPet', 0),
+                }
+        if fallback_data:
+            return {
+                'vip': fallback_data.get('pVIP', 0),
+                'suryeon': fallback_data.get('pSooryun', 0),
+                'bank': fallback_data.get('pBank', 0),
+                'power': fallback_data.get('pPower', 0),
+                'statue': fallback_data.get('pStatue', 0),
+                'fairy': fallback_data.get('pFairy', 0),
+                'pet': fallback_data.get('pPet', 0),
+            }
+    except Exception:
+        pass
+    return {}
+
+def fetch_rankings(limit=100, force_refresh=False):
+    now = time.time()
+    if not force_refresh and RANKINGS_CACHE['data'] is not None and (now - RANKINGS_CACHE['time']) < RANKINGS_CACHE_TTL:
+        return RANKINGS_CACHE['data']
+
+    with RANKINGS_CACHE['lock']:
+        now = time.time()
+        if not force_refresh and RANKINGS_CACHE['data'] is not None and (now - RANKINGS_CACHE['time']) < RANKINGS_CACHE_TTL:
+            return RANKINGS_CACHE['data']
+
+        all_rankings = []
+        seen = set()
+        page = 1
+        while len(all_rankings) < limit and page <= 10:
+            p_ranks = fetch_rankings_page(page)
+            if not p_ranks:
+                break
+            new_added = 0
+            for r in p_ranks:
+                key = (r['nicname'], r['character'])
+                if key not in seen:
+                    seen.add(key)
+                    all_rankings.append(r)
+                    new_added += 1
+                    if len(all_rankings) >= limit:
+                        break
+            if new_added == 0 or len(p_ranks) < 5:
+                break
+            page += 1
+
+        all_rankings = all_rankings[:limit]
+
+        # Enrich with quick stats in parallel
+        def enrich_one(r):
+            stats = fetch_user_quick_stats(r['nicname'], r.get('character', 'FUN'))
+            r['vip'] = stats.get('vip', 0)
+            r['suryeon'] = stats.get('suryeon', 0)
+            r['bank'] = stats.get('bank', 0)
+            r['power'] = stats.get('power', 0)
+            r['statue'] = stats.get('statue', 0)
+            r['fairy'] = stats.get('fairy', 0)
+            r['pet'] = stats.get('pet', 0)
+            return r
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+            list(executor.map(enrich_one, all_rankings))
+
+        RANKINGS_CACHE['data'] = all_rankings
+        RANKINGS_CACHE['time'] = time.time()
+        return all_rankings
 
 def fetch_maplog_page(page=1):
     import time
@@ -263,6 +374,111 @@ def fetch_maplog():
         results += fetch_maplog_page(2)
     return results[:30]
 
+PATCH_CACHE = {'data': None, 'time': 0, 'lock': threading.Lock()}
+PATCH_CACHE_TTL = 300  # 5 minutes
+
+LOCAL_PATCH_SUMMARIES = {
+    '57': [
+        '보스 [에테리온] 추가 (특수4 상점 D / 정력 15+ & 고대 무기[+7]+ / 입장료: 정뱅 50만 + 펀코어 5)',
+        '신규 무기 [성계 무기 +0~+9] (고대[+9] + 성계의 핵 + 펀코어 30 + 무한조각 30 + 정뱅 200만)',
+        '보스 [네메시스] 추가 (특수4 상점 F / 정력 20+ & 성계 무기[+7]+ / 입장료: 정뱅 100만 + 펀코어 8)',
+        '신규 무기 [창세 무기 +0~+9] (성계[+9] + 태초의 핵 + 펀코어 50 + 무한조각 50 + 정뱅 400만)',
+        '신규 지역/방어구 [날만강 HP:6] 추가 (특수5 상점 S / 수련치 150만+ & 정력 12+ & 날만강[HP:5])',
+    ],
+    '56': [
+        '신규 보스 [크로노스] 추가 (정력 12+ 입장 / [시간의 핵], [시간의 정수] 드랍)',
+        '신규 최상위 무기 [고대 무기 +0~+9] 추가 (강화 시 펀 코어 3~30개 소모)',
+        '신규 스킬북 [제4장 스킬북 : 신의 각성] 추가 (제3장 + 시간의 핵 + 펀코어 20 + 무한조각 100 + 정뱅 200만)',
+        '신규 최상위 방어구 [날만강[HP:5]] 추가 (날만강[HP:4] + 업글석 10 + 펀코어 10 + 정뱅 5만)',
+    ],
+    '55': [
+        '신규 상위 보스 [카오스보스] 추가 (미다스 무기 이상 착용 / 1일 1회)',
+        '십자 파멸 레이저, 공허의 외곽 폭발 등 4종 회피 패턴 및 총 30만 타격 기믹 적용',
+    ],
+    '54': [
+        '신규 보스 [미다스] & 무기 [미다스 +0~+9], [미다스의 핵], [황금 주괴] 추가',
+        '[무한의 탑], [정수코인] 시스템 및 신규 확률증가권(+10/+20/+30), 실패의 파편 개편',
+    ],
+}
+
+def fetch_patch_viewer_content(viewer_path):
+    if not viewer_path:
+        return ''
+    url = f"https://m16tool.xyz{urllib.parse.quote(viewer_path)}"
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    try:
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            h = resp.read().decode('utf-8')
+        m = re.search(r'<div class="content" id="content">(.*?)</div>', h, re.S | re.I)
+        if not m:
+            return ''
+        raw = m.group(1)
+        raw = re.sub(r'<br\s*/?>', '\n', raw, flags=re.I)
+        raw = re.sub(r'</p>|</div>|</li>', '\n', raw, flags=re.I)
+        txt = html_lib.unescape(re.sub(r'<[^>]+>', '', raw))
+        lines = [line.strip() for line in txt.splitlines() if line.strip()]
+        return '\n'.join(lines)
+    except Exception:
+        return ''
+
+def fetch_patch_info(force_refresh=False):
+    now = time.time()
+    if not force_refresh and PATCH_CACHE['data'] is not None and (now - PATCH_CACHE['time']) < PATCH_CACHE_TTL:
+        return PATCH_CACHE['data']
+
+    with PATCH_CACHE['lock']:
+        now = time.time()
+        if not force_refresh and PATCH_CACHE['data'] is not None and (now - PATCH_CACHE['time']) < PATCH_CACHE_TTL:
+            return PATCH_CACHE['data']
+
+        url = "https://m16tool.xyz/Game/FNF%20RPG%20J/PatchInfo/Index"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        patches = []
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                h = resp.read().decode('utf-8')
+            tbody_m = re.search(r'<tbody>(.*?)</tbody>', h, re.S | re.I)
+            if tbody_m:
+                rows = re.findall(r'<tr>(.*?)</tr>', tbody_m.group(1), re.S | re.I)
+                for r in rows[:12]:
+                    link_m = re.search(r'<a[^>]*href="([^"]+)"[^>]*>(.*?)</a>', r, re.S | re.I)
+                    tds = re.findall(r'<td[^>]*>(.*?)</td>', r, re.S | re.I)
+                    if link_m and len(tds) >= 2:
+                        href = html_lib.unescape(link_m.group(1)).strip()
+                        title = html_lib.unescape(re.sub(r'<[^>]+>', '', link_m.group(2))).strip()
+                        date_txt = html_lib.unescape(re.sub(r'<[^>]+>', '', tds[1])).strip()
+                        date_txt = re.sub(r'\s+', ' ', date_txt)
+                        ver_m = re.search(r'(\d+)\s*$', title)
+                        ver_num = ver_m.group(1) if ver_m else ''
+                        patches.append({
+                            'title': title,
+                            'version': ver_num,
+                            'date': date_txt,
+                            'url': f"https://m16tool.xyz{urllib.parse.quote(href)}",
+                            'href': href,
+                            'summary': LOCAL_PATCH_SUMMARIES.get(ver_num, []),
+                            'content': ''
+                        })
+        except Exception as e:
+            print(f"Error fetching patch info: {e}")
+
+        # Fetch M16 viewer content in parallel for top 8 patches
+        def load_content(p):
+            p['content'] = fetch_patch_viewer_content(p.get('href', ''))
+            return p
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
+            list(ex.map(load_content, patches[:8]))
+
+        latest = patches[0] if patches else {'title': 'FNFRPG_J', 'version': '', 'date': ''}
+        res = {
+            'latest': latest,
+            'patches': patches
+        }
+        PATCH_CACHE['data'] = res
+        PATCH_CACHE['time'] = time.time()
+        return res
+
 def parse_growth_log_entry(l):
     log_text = l.get('Loging', '').replace('<br>', '\n')
     date_str = l.get('CreateDate')
@@ -302,8 +518,11 @@ def fetch_single_player_growth(player):
     char = str(player.get('character', '1'))
     rank = player.get('rank', '0')
     
+    from datetime import datetime
+    current_month = datetime.now().strftime('%Y-%m')
+    
     url = 'https://logs2.m16tool.xyz/Game/FNF%20RPG%20J/UserLog/GetLog2'
-    data = {'nicName': nic, 'character': char, 'index': '0', 'search': '', 'Month': '2026-08'}
+    data = {'nicName': nic, 'character': char, 'index': '0', 'search': '', 'Month': current_month}
     req = urllib.request.Request(url, data=urllib.parse.urlencode(data).encode('utf-8'), headers={
         'User-Agent': 'Mozilla/5.0',
         'Referer': f'https://m16tool.xyz/Game/FNF%20RPG%20J/UserLog/RPGDetail?nicName={urllib.parse.quote(nic)}&character={urllib.parse.quote(char)}',
@@ -430,7 +649,9 @@ class CustomHandler(http.server.BaseHTTPRequestHandler):
             
         # API Route: /api/rankings
         if parsed_url.path == '/api/rankings':
-            results = fetch_rankings()
+            query = urllib.parse.parse_qs(parsed_url.query)
+            force_refresh = query.get('refresh', ['0'])[0] == '1'
+            results = fetch_rankings(limit=100, force_refresh=force_refresh)
             self.send_response(200)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
             self.send_header('Access-Control-Allow-Origin', '*')
@@ -453,6 +674,17 @@ class CustomHandler(http.server.BaseHTTPRequestHandler):
         # API Route: /api/growth
         if parsed_url.path == '/api/growth':
             results = fetch_top30_growth()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            self.end_headers()
+            self.wfile.write(json.dumps(results, ensure_ascii=False).encode('utf-8'))
+            return
+
+        # API Route: /api/patchinfo
+        if parsed_url.path == '/api/patchinfo':
+            results = fetch_patch_info()
             self.send_response(200)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
             self.send_header('Access-Control-Allow-Origin', '*')
@@ -490,6 +722,10 @@ class CustomHandler(http.server.BaseHTTPRequestHandler):
 if __name__ == "__main__":
     # Ensure working directory is the folder of this script
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    
+    # Pre-warm rankings & patch info cache in background
+    threading.Thread(target=fetch_rankings, daemon=True).start()
+    threading.Thread(target=fetch_patch_info, daemon=True).start()
     
     # Run multi-threaded server
     socketserver.TCPServer.allow_reuse_address = True

@@ -13,7 +13,7 @@
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=2.0">
+    <link rel="stylesheet" href="style.css?v=2.3">
     
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-SW7YG69BND"></script>
@@ -50,15 +50,22 @@
                     <table class="ranking-table" id="rankingTable">
                         <thead>
                             <tr>
-                                <th style="width: 35%">순위</th>
-                                <th style="width: 37%">닉네임</th>
-                                <th style="width: 28%">스코어</th>
+                                <th>순위</th>
+                                <th>닉네임</th>
+                                <th>스코어</th>
+                                <th>VIP</th>
+                                <th>수련치</th>
+                                <th>정뱅</th>
+                                <th>정력</th>
+                                <th>동상</th>
+                                <th>요정</th>
+                                <th>펫</th>
                             </tr>
                         </thead>
                         <tbody id="rankingBody">
                             <tr>
-                                <td colspan="3" class="text-center loading-text">
-                                    <i class="fa-solid fa-spinner fa-spin"></i> 랭킹 불러오는 중...
+                                <td colspan="10" class="text-center loading-text">
+                                    <i class="fa-solid fa-spinner fa-spin"></i> 랭킹 및 스탯 불러오는 중...
                                 </td>
                             </tr>
                         </tbody>
@@ -82,7 +89,13 @@
             <header class="top-nav">
                 <div class="logo-area">
                     <span class="logo-sub">FNF RPG J</span>
-                    <h1 class="logo-title">캐릭터 정보 분석기</h1>
+                    <div class="logo-title-row">
+                        <h1 class="logo-title">캐릭터 정보 분석기</h1>
+                        <button type="button" class="map-version-badge" id="mapVersionBtn" title="클릭하여 버전별 패치 노트 요약 보기" onclick="openPatchModal()">
+                            <i class="fa-solid fa-code-branch"></i>
+                            <span id="mapVersionText">최신 버전 로딩...</span>
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="header-right-group">
@@ -179,123 +192,119 @@
                         </div>
                     </div>
 
-                    <!-- Grid Layout for Stats & Inventory -->
-                    <div class="dashboard-grid">
+                    <!-- Balanced Vertical Stack: 특수 요약 -> 중요 아이템 -> 인벤토리 -> 기본 스탯 -->
+                    <div class="dashboard-stack">
                         
-                        <!-- Stats Card -->
-                        <section class="grid-card stats-card">
-                            <div class="stats-section-header">
+                        <!-- 1. Special Stats Summary Card -->
+                        <section class="grid-card stats-card special-stats-card">
+                            <div class="stats-section-header" style="margin-bottom: 10px;">
                                 <i class="fa-solid fa-star card-icon-gold"></i>
                                 <h3>특수 요약</h3>
                             </div>
                             <div class="special-stats-grid" id="specialStatsBar">
                                 <!-- Mini stat chips populated dynamically -->
                             </div>
-                            
-                            <hr class="section-divider">
-                            
-                            <div class="stats-section-header header-small">
-                                <i class="fa-solid fa-chart-simple card-icon"></i>
-                                <h3>기본 스탯</h3>
-                            </div>
-                            <div class="stats-grid">
-                                <!-- Row 1: Currencies / General Info -->
-                                <div class="stat-box gold stat-box-sm">
-                                    <span class="stat-label">골드 (Gold)</span>
-                                    <div class="stat-value-container">
-                                        <i class="fa-solid fa-coins gold-icon"></i>
-                                        <span class="stat-value" id="statGold">0</span>
-                                    </div>
-                                </div>
-                                <div class="stat-box wood stat-box-sm">
-                                    <span class="stat-label">정수</span>
-                                    <div class="stat-value-container">
-                                        <i class="fa-solid fa-tree wood-icon"></i>
-                                        <span class="stat-value" id="statWood">0</span>
-                                    </div>
-                                </div>
-                                <div class="stat-box stat-hero-exp stat-box-sm">
-                                    <span class="stat-label">경험치 (Exp)</span>
-                                    <span class="stat-value" id="statHeroExp">0</span>
-                                </div>
-                                
-                                <!-- Row 2: Hero Attributes -->
-                                <div class="stat-box stat-str stat-box-sm">
-                                    <span class="stat-label">힘 (Str)</span>
-                                    <span class="stat-value" id="statStr">0</span>
-                                </div>
-                                <div class="stat-box stat-agi stat-box-sm">
-                                    <span class="stat-label">민첩 (Agi)</span>
-                                    <span class="stat-value" id="statAgi">0</span>
-                                </div>
-                                <div class="stat-box stat-int stat-box-sm">
-                                    <span class="stat-label">지능 (Int)</span>
-                                    <span class="stat-value" id="statInt">0</span>
-                                </div>
+                        </section>
 
-                                <!-- Row 3: Pet Attributes -->
-                                <div class="stat-box stat-pet-agi stat-box-sm">
-                                    <span class="stat-label">펫 민첩 (Pet Agi)</span>
-                                    <span class="stat-value" id="statPetAgi">0</span>
-                                </div>
-                                <div class="stat-box stat-pet-int stat-box-sm">
-                                    <span class="stat-label">펫 지능 (Pet Int)</span>
-                                    <span class="stat-value" id="statPetInt">0</span>
-                                </div>
-                                <div class="stat-box stat-pet-exp stat-box-sm">
-                                    <span class="stat-label">펫 경험치 (Pet Exp)</span>
-                                    <span class="stat-value" id="statPetExp">0</span>
-                                </div>
+                        <!-- 2. Important Items Summary Card (Only shows items with count > 0) -->
+                        <section class="grid-card important-items-card hidden" id="importantItemsCard">
+                            <div class="stats-section-header header-small" style="margin-bottom: 8px;">
+                                <i class="fa-solid fa-gem card-icon-gold"></i>
+                                <h3>보유 중요 아이템</h3>
                             </div>
-                            
-                            <div class="types-container types-container-sm">
-                                <div class="type-box">
-                                    <span class="type-label">영웅 타입</span>
-                                    <div class="type-value type-value-sm">
-                                        <i class="fa-solid fa-skull-crossbones"></i>
-                                        <span id="heroTypeCode">O/o3</span>
-                                        <small id="heroTypeName">(로딩중)</small>
-                                    </div>
-                                </div>
-                                <div class="type-box">
-                                    <span class="type-label">펫 타입</span>
-                                    <div class="type-value type-value-sm">
-                                        <i class="fa-solid fa-paw"></i>
-                                        <span id="petTypeCode">O/pe</span>
-                                        <small id="petTypeName">(로딩중)</small>
-                                    </div>
-                                </div>
+                            <div class="important-items-grid" id="importantItemsGrid">
+                                <!-- Dynamically populated -->
                             </div>
                         </section>
 
-                        <!-- Right Column: Inventories Column -->
-                        <div class="right-inventories-column">
-                            <!-- Hero Inventory Card -->
-                            <section class="grid-card inventory-card">
+                        <!-- 3. Hero & Bag Inventories (Side by Side) -->
+                        <div class="inventories-row">
+                            <section class="grid-card inventory-card inventory-card-compact">
                                 <div class="card-header">
                                     <i class="fa-solid fa-shield card-icon"></i>
-                                    <h3>영웅 인벤토리 (Hero Inventory)</h3>
+                                    <h3>영웅 인벤토리 (Hero)</h3>
                                 </div>
                                 
-                                <div class="inventory-grid" id="heroInventoryGrid">
+                                <div class="inventory-grid inventory-grid-sm" id="heroInventoryGrid">
                                     <!-- 6 Slots dynamically populated -->
                                 </div>
                             </section>
 
-                            <!-- Bag Inventory Card (Directly Below Hero Inventory) -->
-                            <section class="grid-card inventory-card bag-quick-card">
+                            <section class="grid-card inventory-card inventory-card-compact bag-quick-card">
                                 <div class="card-header">
                                     <i class="fa-solid fa-bag-shopping card-icon"></i>
-                                    <h3>가방 인벤토리 (Bag Inventory)</h3>
+                                    <h3>가방 인벤토리 (Bag)</h3>
                                 </div>
                                 
-                                <div class="inventory-grid" id="bag1InventoryGrid">
+                                <div class="inventory-grid inventory-grid-sm" id="bag1InventoryGrid">
                                     <!-- 6 Slots dynamically populated -->
                                 </div>
                             </section>
                         </div>
 
-                    </div> <!-- End of grid -->
+                        <!-- 4. Slim Basic Stats Card -->
+                        <section class="grid-card basic-stats-card">
+                            <div class="basic-stats-header-row">
+                                <div class="stats-section-header header-small" style="margin-bottom: 0;">
+                                    <i class="fa-solid fa-chart-simple card-icon"></i>
+                                    <h3>기본 스탯</h3>
+                                </div>
+                                <div class="types-inline">
+                                    <span class="type-pill">
+                                        <i class="fa-solid fa-skull-crossbones"></i>
+                                        <span class="type-pill-label">영웅:</span>
+                                        <strong id="heroTypeCode">O/o3</strong>
+                                        <small id="heroTypeName">(로딩중)</small>
+                                    </span>
+                                    <span class="type-pill">
+                                        <i class="fa-solid fa-paw"></i>
+                                        <span class="type-pill-label">펫:</span>
+                                        <strong id="petTypeCode">O/pe</strong>
+                                        <small id="petTypeName">(로딩중)</small>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="stats-grid-slim">
+                                <div class="stat-pill gold">
+                                    <span class="stat-pill-label">골드</span>
+                                    <span class="stat-pill-val" id="statGold">0</span>
+                                </div>
+                                <div class="stat-pill wood">
+                                    <span class="stat-pill-label">정수</span>
+                                    <span class="stat-pill-val" id="statWood">0</span>
+                                </div>
+                                <div class="stat-pill">
+                                    <span class="stat-pill-label">경험치</span>
+                                    <span class="stat-pill-val" id="statHeroExp">0</span>
+                                </div>
+                                <div class="stat-pill">
+                                    <span class="stat-pill-label">힘</span>
+                                    <span class="stat-pill-val" id="statStr">0</span>
+                                </div>
+                                <div class="stat-pill">
+                                    <span class="stat-pill-label">민첩</span>
+                                    <span class="stat-pill-val" id="statAgi">0</span>
+                                </div>
+                                <div class="stat-pill">
+                                    <span class="stat-pill-label">지능</span>
+                                    <span class="stat-pill-val" id="statInt">0</span>
+                                </div>
+                                <div class="stat-pill">
+                                    <span class="stat-pill-label">펫 민첩</span>
+                                    <span class="stat-pill-val" id="statPetAgi">0</span>
+                                </div>
+                                <div class="stat-pill">
+                                    <span class="stat-pill-label">펫 지능</span>
+                                    <span class="stat-pill-val" id="statPetInt">0</span>
+                                </div>
+                                <div class="stat-pill">
+                                    <span class="stat-pill-label">펫 경험치</span>
+                                    <span class="stat-pill-val" id="statPetExp">0</span>
+                                </div>
+                            </div>
+                        </section>
+
+                    </div> <!-- End of dashboard-stack -->
 
                     <!-- Bags Section Card -->
                     <section class="bags-section-card grid-card">
@@ -375,6 +384,30 @@
         </div>
     </div>
     
-    <script src="app.js?v=1.9"></script>
+    <!-- Patch Notes Modal -->
+    <div class="modal-overlay hidden" id="patchNoteModal">
+        <div class="modal-card patch-modal-card animate-zoom-in">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-scroll" style="color: #fbbf24;"></i> 버전별 패치 노트 요약</h3>
+                <button class="close-modal-btn" onclick="closePatchModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="patch-modal-body">
+                <div class="patch-version-tabs" id="patchVersionTabs">
+                    <!-- Dynamically populated version buttons -->
+                </div>
+                <div class="patch-detail-box" id="patchDetailBox">
+                    <div class="text-center loading-text">패치 노트를 불러오는 중...</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a href="https://m16tool.xyz/Game/FNF%20RPG%20J/PatchInfo/Index" target="_blank" rel="noopener noreferrer" class="btn-secondary" id="patchExternalLink" style="text-decoration: none;">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> M16 툴 원문 보기
+                </a>
+                <button class="btn-primary" onclick="closePatchModal()">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js?v=2.3"></script>
 </body>
 </html>

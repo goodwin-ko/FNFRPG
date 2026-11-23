@@ -75,7 +75,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         console.error('Failed to load item database', e);
     }
 
-    // 3. Load Rankings & Event Logs
+    // 3. Load Patch Info, Rankings & Event Logs
+    loadPatchInfo();
     await loadRankings();
     loadEventLogs();
     
@@ -115,6 +116,15 @@ window.addEventListener('DOMContentLoaded', async () => {
     initMobileTabs();
 });
 
+// Helper: Compact format for large numbers in rankings table
+function formatCompactNum(num) {
+    const n = Number(num) || 0;
+    if (n === 0) return '0';
+    if (n >= 100000000) return (n / 100000000).toFixed(2).replace(/\.00$/, '') + '억';
+    if (n >= 10000) return (n / 10000).toFixed(1).replace(/\.0$/, '') + '만';
+    return n.toLocaleString();
+}
+
 // Load rankings from backend API
 async function loadRankings() {
     try {
@@ -125,7 +135,7 @@ async function loadRankings() {
         rankingBody.innerHTML = '';
         
         if (ranks.length === 0) {
-            rankingBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">랭킹 데이터가 없습니다.</td></tr>';
+            rankingBody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">랭킹 데이터가 없습니다.</td></tr>';
             return;
         }
 
@@ -164,11 +174,27 @@ async function loadRankings() {
             } else {
                 badgeHtml = `<span class="rank-badge rank-other">${rankNum}</span>`;
             }
+
+            const scoreVal = Number(player.score) || 0;
+            const vipVal = Number(player.vip) || 0;
+            const suryeonVal = Number(player.suryeon) || 0;
+            const bankVal = Number(player.bank) || 0;
+            const powerVal = Number(player.power) || 0;
+            const statueVal = Number(player.statue) || 0;
+            const fairyVal = Number(player.fairy) || 0;
+            const petVal = Number(player.pet) || 0;
                                
             tr.innerHTML = `
                 <td>${badgeHtml}</td>
                 <td><div class="rank-name" title="${player.nicname}">${player.nicname}</div></td>
-                <td><span class="rank-score">${Number(player.score).toLocaleString()}</span></td>
+                <td><span class="rank-score" title="${scoreVal.toLocaleString()}">${formatCompactNum(scoreVal)}</span></td>
+                <td class="rank-stat-cell rank-vip-cell">${vipVal}</td>
+                <td class="rank-stat-cell" title="${suryeonVal.toLocaleString()}">${formatCompactNum(suryeonVal)}</td>
+                <td class="rank-stat-cell" title="${bankVal.toLocaleString()}">${formatCompactNum(bankVal)}</td>
+                <td class="rank-stat-cell rank-power-cell">${powerVal}</td>
+                <td class="rank-stat-cell">${statueVal}</td>
+                <td class="rank-stat-cell">${fairyVal}</td>
+                <td class="rank-stat-cell rank-pet-cell">${petVal}</td>
             `;
             
             tr.addEventListener('click', () => {
@@ -180,7 +206,7 @@ async function loadRankings() {
         });
     } catch (e) {
         console.error('Error loading rankings', e);
-        rankingBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted"><i class="fa-solid fa-triangle-exclamation"></i> 불러오기 실패</td></tr>';
+        rankingBody.innerHTML = '<tr><td colspan="10" class="text-center text-muted"><i class="fa-solid fa-triangle-exclamation"></i> 불러오기 실패</td></tr>';
     }
 }
 
@@ -346,26 +372,35 @@ function renderActiveSlot() {
     petTypeCode.textContent = petCode || 'None';
     petTypeName.textContent = getItemName(data.pet, petCode, 0);
 
-    // 3.5 Special Stats Summary Display (이만강, 수련치, VIP, 정수뱅크, 정신력, 정력, 별성, 펫 등급, DP[대륙], 동상, 후포, 가방)
+    // 3.5 Special Stats Summary Display (이만강, 수련치, VIP, 정수뱅크, 정수코인, 정신력, 정력, 별성, 펫 등급, 요정 레벨, 무한의 탑, 동상, 후포, 빙고P, 가방)
     const specialStatsBar = document.getElementById('specialStatsBar');
     if (specialStatsBar) {
         specialStatsBar.innerHTML = '';
         
         const logStats = slotObj.log_stats || {};
 
-        // Find counts
-        const cntImangang = findItemCount(data, 1227895602);
-        const cntSuryeonchi = findItemCount(data, 776548403);
-        const cntVip = findItemCount(data, 1227902280);
-        const cntJeongsuBank = findItemCount(data, 1227896147);
-        const cntJeonsinryeok = findItemCount(data, 1227901528);
-        const cntJeongryeok = findItemCount(data, 1227903062);
-        const cntDp = (logStats.dp !== undefined) ? logStats.dp : findItemCount(data, 1227903799);
-        const cntStatue = (logStats.statue !== undefined) ? logStats.statue : findItemCount(data, 1227903800);
+        // Find counts (Prioritize p* direct properties from latest map update)
+        const cntImangang = data.pRank !== undefined ? data.pRank : findItemCount(data, 1227895602);
+        const cntSuryeonchi = data.pSooryun !== undefined ? data.pSooryun : findItemCount(data, 776548403);
+        const cntVip = data.pVIP !== undefined ? data.pVIP : findItemCount(data, 1227902280);
+        const cntJeongsuBank = data.pBank !== undefined ? data.pBank : findItemCount(data, 1227896147);
+        const cntCoin = data.pCoin !== undefined ? data.pCoin : (logStats.coin !== undefined ? logStats.coin : 0);
+        const cntJeonsinryeok = data.pMental !== undefined ? data.pMental : findItemCount(data, 1227901528);
+        const cntJeongryeok = data.pPower !== undefined ? data.pPower : findItemCount(data, 1227903062);
+        const cntBingo = data.pBpoint !== undefined ? data.pBpoint : findItemCount(data, 1227902296);
         
-        // 후포 (Title/Hupo: Log parsing priority)
+        // pLDATA is now a date (YYYYMMDD >= 20000000) in latest patch, only use as DP if < 20000000
+        const cntDp = (data.pLDATA !== undefined && data.pLDATA < 20000000)
+            ? data.pLDATA
+            : ((logStats.dp !== undefined) ? logStats.dp : findItemCount(data, 1227903799));
+        const cntTower = data.pTFloor !== undefined ? data.pTFloor : (logStats.tower_floor !== undefined ? logStats.tower_floor : 0);
+        const cntStatue = data.pStatue !== undefined ? data.pStatue : ((logStats.statue !== undefined) ? logStats.statue : findItemCount(data, 1227903800));
+        
+        // 후포 (Title/Hupo: p* priority -> Log parsing -> item count)
         let cntHupo = 0;
-        if (logStats.hupo !== undefined) {
+        if (data.pHpoint !== undefined) {
+            cntHupo = data.pHpoint;
+        } else if (logStats.hupo !== undefined) {
             cntHupo = logStats.hupo;
         } else if (data.log_hupo !== undefined) {
             cntHupo = data.log_hupo;
@@ -383,14 +418,16 @@ function renderActiveSlot() {
         }
         
         // 별성 (Star Grade) calculation & mapping
-        const cntStars = (logStats.stars !== undefined) ? logStats.stars : findItemCount(data, 1227903310);
+        const cntStars = data.pStar !== undefined ? data.pStar : ((logStats.stars !== undefined) ? logStats.stars : findItemCount(data, 1227903310));
         const starInfo = getStarGradeInfo(cntStars);
         const starName = starInfo.name;
         const starColor = starInfo.color;
 
         // Pet Grade calculation
         let petGrade = 0;
-        if (logStats.pet_grade !== undefined) {
+        if (data.pPet !== undefined) {
+            petGrade = data.pPet;
+        } else if (logStats.pet_grade !== undefined) {
             petGrade = logStats.pet_grade;
         } else {
             const currentPetName = getItemName(data.pet, intToRawcode(data.pet));
@@ -406,17 +443,19 @@ function renderActiveSlot() {
             }
         }
         
-        // 요정 레벨 (Fairy Level: 1227903044 or log priority)
-        const cntFairy = (logStats.fairy_level !== undefined) 
+        // 요정 레벨 (Fairy Level)
+        const cntFairy = data.pFairy !== undefined ? data.pFairy : ((logStats.fairy_level !== undefined) 
             ? logStats.fairy_level 
-            : (data.log_fairy_level !== undefined ? data.log_fairy_level : findItemCount(data, 1227903044));
+            : (data.log_fairy_level !== undefined ? data.log_fairy_level : findItemCount(data, 1227903044)));
 
-        // Find bag skin (log priority, else check equipped b6i1 slot, else 없음)
+        // Find bag skin (log priority -> pBag ID mapping -> equipped b6i1 slot -> 없음)
         let ownedBagName = '없음';
         if (logStats.bag_skin && logStats.bag_skin !== '없음' && !logStats.bag_skin.startsWith('영웅') && !logStats.bag_skin.startsWith('(')) {
             ownedBagName = logStats.bag_skin;
         } else if (data.log_bag_skin && data.log_bag_skin !== '없음' && !data.log_bag_skin.startsWith('영웅') && !data.log_bag_skin.startsWith('(')) {
             ownedBagName = data.log_bag_skin;
+        } else if (data.pBag !== undefined && data.pBag > 0) {
+            ownedBagName = getBagNameById(data.pBag);
         } else if (data.b6i1) {
             const b6Name = getItemName(data.b6i1, intToRawcode(data.b6i1));
             if ((b6Name.includes('가방') || b6Name.includes('풀백') || b6Name.includes('루미') || b6Name.includes('풀강') || b6Name.includes('보물')) && !b6Name.includes('미등록') && !b6Name.includes('알 수 없는') && !b6Name.startsWith('(')) {
@@ -424,32 +463,49 @@ function renderActiveSlot() {
             }
         }
         
+        // Infinite Tower today completion check (pTDate === YYYYMMDD)
+        const nowDate = new Date();
+        const todayInt = nowDate.getFullYear() * 10000 + (nowDate.getMonth() + 1) * 100 + nowDate.getDate();
+        const isTowerDoneToday = data.pTDate === todayInt;
+        const towerText = cntTower > 0 ? `${cntTower}층` : '0층';
+        const towerHtml = isTowerDoneToday
+            ? `${towerText}<span class="tower-badge done">✓ 오늘완료</span>`
+            : `${towerText}<span class="tower-badge pending">미완료</span>`;
+
         const specialList = [
             { label: '이만강', value: cntImangang.toLocaleString(), color: '#cbd5e1' },
             { label: '수련치', value: cntSuryeonchi.toLocaleString(), color: '#10b981' },
             { label: 'VIP', value: cntVip.toLocaleString(), color: '#fef08a' },
             { label: '정수뱅크', value: cntJeongsuBank.toLocaleString(), color: '#3b82f6' },
+            { label: '정수코인', value: cntCoin.toLocaleString(), color: '#fbbf24' },
             { label: '정신력', value: cntJeonsinryeok.toLocaleString(), color: '#a855f7' },
             { label: '정력', value: cntJeongryeok.toLocaleString(), color: '#ef4444' },
             { label: '별성', value: starName, color: starColor },
             { label: '펫 등급', value: petGrade.toLocaleString(), color: '#f472b6' },
             { label: '요정 레벨', value: cntFairy.toLocaleString(), color: '#818cf8' },
-            { label: 'DP[대륙]', value: cntDp.toLocaleString(), color: '#f97316' },
+            { label: '무한의 탑', value: towerText, valueHtml: towerHtml, color: '#38bdf8' },
             { label: '동상', value: cntStatue.toLocaleString(), color: '#10b981' },
             { label: '후포', value: cntHupo.toLocaleString(), color: '#c084fc' },
+            { label: '빙고P', value: cntBingo.toLocaleString(), color: '#facc15' },
             { label: '가방', value: ownedBagName, color: '#0ea5e9' }
         ];
+        if (cntDp > 0) {
+            specialList.splice(10, 0, { label: 'DP[대륙]', value: cntDp.toLocaleString(), color: '#f97316' });
+        }
         
         specialList.forEach(item => {
             const chip = document.createElement('div');
             chip.className = 'special-stat-chip';
             chip.innerHTML = `
                 <span class="chip-label">${item.label}</span>
-                <span class="chip-value" style="color: ${item.color}" title="${item.value}">${item.value}</span>
+                <span class="chip-value" style="color: ${item.color}" title="${item.value}">${item.valueHtml || item.value}</span>
             `;
             specialStatsBar.appendChild(chip);
         });
     }
+
+    // 3.8 Render Important Items Summary (above Hero/Bag Inventory)
+    renderImportantItems(data);
 
     // 4. Hero Inventory Slots (6 slots)
     heroInventoryGrid.innerHTML = '';
@@ -971,4 +1027,180 @@ function initMobileTabs() {
         appContainer.classList.remove('show-search');
         appContainer.classList.add('show-rankings');
     });
+}
+
+// Map pBag numeric ID to bag skin name
+function getBagNameById(pBag) {
+    if (!pBag || pBag <= 0) return '없음';
+    if (pBag >= 1 && pBag <= 3) return '카푸';
+    if (pBag >= 4 && pBag <= 9) return pBag === 4 ? '블용' : `블용+${pBag - 4}`;
+    if (pBag >= 10 && pBag <= 15) return pBag === 10 ? '스더' : `스더+${pBag - 10}`;
+    if (pBag >= 16 && pBag <= 21) return pBag === 16 ? '꼬용' : `꼬용+${pBag - 16}`;
+    if (pBag >= 22 && pBag <= 27) return pBag === 22 ? '타갓' : `타갓+${pBag - 22}`;
+    if (pBag === 73) return '크린';
+    if (pBag === 74) return '풀백';
+    return `가방 #${pBag}`;
+}
+
+// Render Important Items Summary above Hero/Bag Inventory (only items with count > 0)
+function renderImportantItems(data) {
+    const card = document.getElementById('importantItemsCard');
+    const grid = document.getElementById('importantItemsGrid');
+    if (!card || !grid) return;
+
+    const importantDefs = [
+        { name: '펀 코어', id: 1227905614, color: '#38bdf8' },
+        { name: '무한의 조각', id: 1227960392, color: '#c084fc' },
+        { name: '확률증가권+30', id: 1227905589, color: '#f43f5e' },
+        { name: '확률증가권+20', id: 1227905588, color: '#fb923c' },
+        { name: '확률증가권+10', id: 1227905587, color: '#facc15' },
+        { name: '실패의 파편', id: 1227905586, color: '#94a3b8' },
+        { name: '황금 주괴', id: 1227899226, color: '#fbbf24' },
+        { name: '심연의 정수', id: 1227899459, color: '#818cf8' },
+        { name: '시간의 정수', id: 1227960369, color: '#2dd4bf' },
+        { name: '성계의 정수', id: null, color: '#a78bfa' },
+        { name: '태초의 정수', id: null, color: '#f472b6' }
+    ];
+
+    const counts = {};
+    importantDefs.forEach(def => { counts[def.name] = 0; });
+
+    const accumulateSlot = (itemId, rawCount) => {
+        if (!itemId || itemId === 0) return;
+        const cnt = (rawCount && rawCount > 0) ? rawCount : 1;
+        const resolvedName = getItemName(itemId, intToRawcode(itemId), 0)
+            .replace(/^\[+|\]+$/g, '')
+            .trim();
+
+        for (const def of importantDefs) {
+            if ((def.id && itemId === def.id) || resolvedName === def.name) {
+                counts[def.name] += cnt;
+                break;
+            }
+        }
+    };
+
+    // Hero inventory (hi1..6)
+    for (let s = 1; s <= 6; s++) {
+        accumulateSlot(data[`hi${s}`], data[`h${s}c`]);
+    }
+    // Bags 1..8
+    for (let b = 1; b <= 8; b++) {
+        for (let s = 1; s <= 6; s++) {
+            const itemKey = b === 1 ? `bi${s}` : `b${b}i${s}`;
+            const countKey = b === 1 ? (data[`b1${s}c`] !== undefined ? `b1${s}c` : `b${s}c`) : `b${b}${s}c`;
+            accumulateSlot(data[itemKey], data[countKey]);
+        }
+    }
+
+    grid.innerHTML = '';
+    let hasAny = false;
+
+    for (const def of importantDefs) {
+        const total = counts[def.name];
+        if (total > 0) {
+            hasAny = true;
+            const chip = document.createElement('div');
+            chip.className = 'important-item-chip';
+            chip.innerHTML = `
+                <span class="imp-name">${def.name}</span>
+                <span class="imp-count" style="color: ${def.color}">${total.toLocaleString()}</span>
+            `;
+            grid.appendChild(chip);
+        }
+    }
+
+    if (hasAny) {
+        card.classList.remove('hidden');
+    } else {
+        card.classList.add('hidden');
+    }
+}
+
+// Patch Info & Version Badge Logic
+let patchInfoData = null;
+let activePatchIndex = 0;
+
+async function loadPatchInfo() {
+    const versionText = document.getElementById('mapVersionText');
+    try {
+        const resp = await fetch('/api/patchinfo?t=' + Date.now());
+        if (!resp.ok) throw new Error('Patch info error');
+        patchInfoData = await resp.json();
+
+        if (versionText && patchInfoData && patchInfoData.latest) {
+            const latest = patchInfoData.latest;
+            const verLabel = latest.version ? `최신 v${latest.version}` : (latest.title || '패치노트');
+            versionText.textContent = `${verLabel} · 패치노트`;
+        }
+    } catch (e) {
+        console.error('Failed to load patch info', e);
+        if (versionText) versionText.textContent = '패치노트';
+    }
+}
+
+function openPatchModal() {
+    const modal = document.getElementById('patchNoteModal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    renderPatchModalContent();
+}
+
+function closePatchModal() {
+    const modal = document.getElementById('patchNoteModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function renderPatchModalContent() {
+    const tabs = document.getElementById('patchVersionTabs');
+    const detailBox = document.getElementById('patchDetailBox');
+    const extLink = document.getElementById('patchExternalLink');
+    if (!tabs || !detailBox) return;
+
+    if (!patchInfoData || !patchInfoData.patches || patchInfoData.patches.length === 0) {
+        tabs.innerHTML = '';
+        detailBox.innerHTML = '<div class="text-center text-muted">패치 노트 정보를 불러오지 못했습니다.</div>';
+        return;
+    }
+
+    tabs.innerHTML = '';
+    patchInfoData.patches.forEach((p, idx) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `patch-ver-btn ${idx === activePatchIndex ? 'active' : ''}`;
+        btn.textContent = p.version ? `v${p.version}` : p.title;
+        btn.addEventListener('click', () => {
+            activePatchIndex = idx;
+            renderPatchModalContent();
+        });
+        tabs.appendChild(btn);
+    });
+
+    const cur = patchInfoData.patches[activePatchIndex] || patchInfoData.patches[0];
+    if (extLink && cur.url) {
+        extLink.href = cur.url;
+    }
+
+    let html = `
+        <div class="patch-detail-header">
+            <span class="patch-detail-title">${escapeHtml(cur.title)}</span>
+            <span class="patch-detail-date">${escapeHtml(cur.date || '')}</span>
+        </div>
+    `;
+
+    if (cur.summary && cur.summary.length > 0) {
+        html += '<ul class="patch-summary-list">';
+        cur.summary.forEach(line => {
+            html += `<li>${escapeHtml(line)}</li>`;
+        });
+        html += '</ul>';
+    }
+
+    if (cur.content) {
+        html += `<div class="patch-raw-content">${escapeHtml(cur.content)}</div>`;
+    } else if (!cur.summary || cur.summary.length === 0) {
+        html += '<div class="text-muted" style="font-size:0.84rem;">해당 버전의 등록된 요약 본문이 없습니다. 하단 [M16 툴 원문 보기]를 확인해 주세요.</div>';
+    }
+
+    detailBox.innerHTML = html;
 }
