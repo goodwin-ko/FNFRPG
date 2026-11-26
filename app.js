@@ -1307,7 +1307,7 @@ function renderGameInfo() {
                 { stage: '+4강', funcore: '20개', sub: '성계의 정수 / 정뱅 증가' },
                 { stage: '+5강', funcore: '25개', sub: '성계의 정수 / 정뱅 증가' },
                 { stage: '+6강', funcore: '30개', sub: '성계의 정수 / 정뱅 증가' },
-                { stage: '+7강', funcore: '35개', sub: '성계 유성 격파 해금 / S키 Lv.7' },
+                { stage: '+7강', funcore: '35개', sub: '성계 유성 격파 해금 / 피격 방어막 Lv.7 (76%)' },
                 { stage: '+8강', funcore: '40개', sub: '성계의 정수 / 정뱅 증가' },
                 { stage: '+9강', funcore: '45개', sub: '성계의 정수 25개 / 정뱅 500만' }
             ],
@@ -1321,7 +1321,7 @@ function renderGameInfo() {
             craft: '<b>+0 각성(100%):</b> <span class="funcore-hl">펀 코어 50개</span> + 성계[+9] + 태초의 핵 + 무한의 조각 50개 + 정뱅 400만',
             steps: [
                 { stage: '+1강 → +9강', funcore: '8개 → 60개', sub: '태초의 정수 1→30개 / 정뱅 80만→1,000만' },
-                { stage: '+7강 해금', funcore: '-', sub: '창세 심판 폭발(7%, 21억) / S키 Lv.8' }
+                { stage: '+7강 해금', funcore: '-', sub: '창세 심판 폭발(7%, 21억) / 피격 방어막 Lv.8 (77%)' }
             ],
             totalRow: { funcore: '제작 50 + 강화(8→60개)', sub: '태초의 정수 1→30개 / 정뱅 80만→1,000만' }
         },
