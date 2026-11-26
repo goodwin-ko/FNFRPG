@@ -13,7 +13,7 @@
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=2.3">
+    <link rel="stylesheet" href="style.css?v=2.6">
     
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-SW7YG69BND"></script>
@@ -42,6 +42,7 @@
                 <div class="sidebar-tabs">
                     <button class="sidebar-tab active" id="tabRankings"><i class="fa-solid fa-trophy"></i> 랭킹</button>
                     <button class="sidebar-tab" id="tabEventLogs"><i class="fa-solid fa-list-ul"></i> 로그</button>
+                    <button class="sidebar-tab" id="tabGameInfo"><i class="fa-solid fa-book-open"></i> 정보</button>
                 </div>
             </div>
             <div class="ranking-list-container">
@@ -53,6 +54,7 @@
                                 <th>순위</th>
                                 <th>닉네임</th>
                                 <th>스코어</th>
+                                <th>펀코어</th>
                                 <th>VIP</th>
                                 <th>수련치</th>
                                 <th>정뱅</th>
@@ -64,7 +66,7 @@
                         </thead>
                         <tbody id="rankingBody">
                             <tr>
-                                <td colspan="10" class="text-center loading-text">
+                                <td colspan="11" class="text-center loading-text">
                                     <i class="fa-solid fa-spinner fa-spin"></i> 랭킹 및 스탯 불러오는 중...
                                 </td>
                             </tr>
@@ -79,6 +81,20 @@
                             <i class="fa-solid fa-spinner fa-spin"></i> 이벤트 로그 불러오는 중...
                         </div>
                     </div>
+                </div>
+
+                <!-- Panel: Game Info (Items & Bosses) -->
+                <div id="panelGameInfo" class="hidden">
+                    <div class="info-subtabs">
+                        <button type="button" class="info-subtab-btn active" id="subtabItems" onclick="switchInfoSubtab('items')">
+                            <i class="fa-solid fa-hammer"></i> 아이템·강화
+                        </button>
+                        <button type="button" class="info-subtab-btn" id="subtabBosses" onclick="switchInfoSubtab('bosses')">
+                            <i class="fa-solid fa-skull"></i> 보스·입장/보상
+                        </button>
+                    </div>
+                    <div id="infoItemsContent" class="game-info-content"></div>
+                    <div id="infoBossesContent" class="game-info-content hidden"></div>
                 </div>
             </div>
         </aside>
@@ -408,6 +424,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=2.3"></script>
+    <script src="app.js?v=2.7"></script></script></script>
 </body>
 </html>

@@ -83,25 +83,31 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Bind Sidebar Tabs
     const tabRankings = document.getElementById('tabRankings');
     const tabEventLogs = document.getElementById('tabEventLogs');
+    const tabGameInfo = document.getElementById('tabGameInfo');
     const panelRankings = document.getElementById('panelRankings');
     const panelEventLogs = document.getElementById('panelEventLogs');
+    const panelGameInfo = document.getElementById('panelGameInfo');
     
-    if (tabRankings && tabEventLogs) {
-        tabRankings.addEventListener('click', () => {
-            tabRankings.classList.add('active');
-            tabEventLogs.classList.remove('active');
-            panelRankings.classList.remove('hidden');
-            panelEventLogs.classList.add('hidden');
-        });
-
-        tabEventLogs.addEventListener('click', () => {
-            tabEventLogs.classList.add('active');
-            tabRankings.classList.remove('active');
-            panelEventLogs.classList.remove('hidden');
-            panelRankings.classList.add('hidden');
+    const activateSidebarTab = (target) => {
+        [tabRankings, tabEventLogs, tabGameInfo].forEach(b => b && b.classList.remove('active'));
+        [panelRankings, panelEventLogs, panelGameInfo].forEach(p => p && p.classList.add('hidden'));
+        if (target === 'rankings') {
+            tabRankings && tabRankings.classList.add('active');
+            panelRankings && panelRankings.classList.remove('hidden');
+        } else if (target === 'logs') {
+            tabEventLogs && tabEventLogs.classList.add('active');
+            panelEventLogs && panelEventLogs.classList.remove('hidden');
             loadEventLogs();
-        });
-    }
+        } else if (target === 'info') {
+            tabGameInfo && tabGameInfo.classList.add('active');
+            panelGameInfo && panelGameInfo.classList.remove('hidden');
+            renderGameInfo();
+        }
+    };
+
+    if (tabRankings) tabRankings.addEventListener('click', () => activateSidebarTab('rankings'));
+    if (tabEventLogs) tabEventLogs.addEventListener('click', () => activateSidebarTab('logs'));
+    if (tabGameInfo) tabGameInfo.addEventListener('click', () => activateSidebarTab('info'));
     
     // 4. Bind Search Form Submit
     searchForm.addEventListener('submit', (e) => {
@@ -135,7 +141,7 @@ async function loadRankings() {
         rankingBody.innerHTML = '';
         
         if (ranks.length === 0) {
-            rankingBody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">랭킹 데이터가 없습니다.</td></tr>';
+            rankingBody.innerHTML = '<tr><td colspan="11" class="text-center text-muted">랭킹 데이터가 없습니다.</td></tr>';
             return;
         }
 
@@ -183,11 +189,13 @@ async function loadRankings() {
             const statueVal = Number(player.statue) || 0;
             const fairyVal = Number(player.fairy) || 0;
             const petVal = Number(player.pet) || 0;
+            const funcoreVal = Number(player.funcore) || 0;
                                
             tr.innerHTML = `
                 <td>${badgeHtml}</td>
                 <td><div class="rank-name" title="${player.nicname}">${player.nicname}</div></td>
                 <td><span class="rank-score" title="${scoreVal.toLocaleString()}">${formatCompactNum(scoreVal)}</span></td>
+                <td class="rank-stat-cell rank-funcore-cell" title="${funcoreVal.toLocaleString()}">${funcoreVal > 10000 ? formatCompactNum(funcoreVal) : funcoreVal.toLocaleString()}</td>
                 <td class="rank-stat-cell rank-vip-cell">${vipVal}</td>
                 <td class="rank-stat-cell" title="${suryeonVal.toLocaleString()}">${formatCompactNum(suryeonVal)}</td>
                 <td class="rank-stat-cell" title="${bankVal.toLocaleString()}">${formatCompactNum(bankVal)}</td>
@@ -206,7 +214,7 @@ async function loadRankings() {
         });
     } catch (e) {
         console.error('Error loading rankings', e);
-        rankingBody.innerHTML = '<tr><td colspan="10" class="text-center text-muted"><i class="fa-solid fa-triangle-exclamation"></i> 불러오기 실패</td></tr>';
+        rankingBody.innerHTML = '<tr><td colspan="11" class="text-center text-muted"><i class="fa-solid fa-triangle-exclamation"></i> 불러오기 실패</td></tr>';
     }
 }
 
@@ -1203,4 +1211,253 @@ function renderPatchModalContent() {
     }
 
     detailBox.innerHTML = html;
+}
+
+// Sidebar Game Info Tab (Items & Bosses)
+let gameInfoRendered = false;
+
+function switchInfoSubtab(tab) {
+    const btnItems = document.getElementById('subtabItems');
+    const btnBosses = document.getElementById('subtabBosses');
+    const itemsBox = document.getElementById('infoItemsContent');
+    const bossesBox = document.getElementById('infoBossesContent');
+    if (!btnItems || !btnBosses || !itemsBox || !bossesBox) return;
+
+    if (tab === 'items') {
+        btnItems.classList.add('active');
+        btnBosses.classList.remove('active');
+        itemsBox.classList.remove('hidden');
+        bossesBox.classList.add('hidden');
+    } else {
+        btnBosses.classList.add('active');
+        btnItems.classList.remove('active');
+        bossesBox.classList.remove('hidden');
+        itemsBox.classList.add('hidden');
+    }
+}
+
+function renderGameInfo() {
+    if (gameInfoRendered) return;
+    gameInfoRendered = true;
+
+    const itemsBox = document.getElementById('infoItemsContent');
+    const bossesBox = document.getElementById('infoBossesContent');
+    if (!itemsBox || !bossesBox) return;
+
+    const itemGuides = [
+        {
+            title: '미다스 (미다스[+0] ~ [+9])',
+            color: '#fbbf24',
+            totalBadge: '제작 펀 코어 10개 / 주괴 58개',
+            bossEntry: '<b>보스 입장:</b> 정력 7+ & 인피니티[10]+ / <span class="funcore-hl">펀 코어 1개</span> + 정뱅 10만 (골든 실드 30타)',
+            craft: '<b>+0 제작(100%):</b> <span class="funcore-hl">펀 코어 10개</span> + 인피니티[10] + 미다스의 핵 1개 + 정뱅 20만',
+            steps: [
+                { stage: '+1강', funcore: '-', sub: '황금 주괴 1개 / 정뱅 5만' },
+                { stage: '+2강', funcore: '-', sub: '황금 주괴 2개 / 정뱅 7만' },
+                { stage: '+3강', funcore: '-', sub: '황금 주괴 3개 / 정뱅 10만' },
+                { stage: '+4강', funcore: '-', sub: '황금 주괴 4개 / 정뱅 15만' },
+                { stage: '+5강', funcore: '-', sub: '황금 주괴 5개 / 정뱅 20만' },
+                { stage: '+6강', funcore: '-', sub: '황금 주괴 7개 / 정뱅 30만' },
+                { stage: '+7강', funcore: '-', sub: '황금 주괴 9개 / 정뱅 40만' },
+                { stage: '+8강', funcore: '-', sub: '황금 주괴 12개 / 정뱅 50만' },
+                { stage: '+9강(MAX)', funcore: '-', sub: '황금 주괴 15개 / 정뱅 70만' }
+            ],
+            totalRow: { funcore: '제작 10개 (강화 0)', sub: '황금 주괴 58개 / 정뱅 총 267만' }
+        },
+        {
+            title: '아바돈 (아바돈 : +0 ~ +9)',
+            color: '#a855f7',
+            totalBadge: '제작 펀 코어 15개 + 강화',
+            bossEntry: '<b>보스 입장:</b> 정력 9+ & 미다스[+7]+ / <span class="funcore-hl">펀 코어 2개</span> + 정뱅 20만 (3페이즈 / 결계 60타)',
+            craft: '<b>+0 제작(100%):</b> <span class="funcore-hl">펀 코어 15개</span> + 미다스[+9] + 아바돈의 핵 1개 + 정뱅 30만',
+            steps: [
+                { stage: '+1 ~ +9 강화', funcore: '펀 코어 소모', sub: '심연의 정수 / 정수뱅크 (인게임 툴팁 확인)' }
+            ],
+            totalRow: { funcore: '제작 15개 + 강화', sub: '+7강 이상 시 [무한의 탑] 입장 조건 충족' }
+        },
+        {
+            title: '크로노스 — 고대 무기 (+0 ~ +9)',
+            color: '#2dd4bf',
+            totalBadge: '9강 총 펀 코어 129개 / 시간의 정수 66개',
+            bossEntry: '<b>보스 입장:</b> 정력 12+ & 아바돈[+7]+ / <span class="funcore-hl">펀 코어 3개</span> + 정뱅 30만 (결계 100타 / 시간 역행)',
+            craft: '<b>+0 제작:</b> <span class="funcore-hl">펀 코어</span> + 아바돈[+9] + 시간의 핵 + 정수뱅크',
+            steps: [
+                { stage: '+1강', funcore: '3개', sub: '시간의 정수 1개 / 정뱅 20만' },
+                { stage: '+2강', funcore: '5개', sub: '시간의 정수 2개 / 정뱅 30만' },
+                { stage: '+3강', funcore: '7개', sub: '시간의 정수 3개 / 정뱅 45만' },
+                { stage: '+4강', funcore: '10개', sub: '시간의 정수 4개 / 정뱅 60만' },
+                { stage: '+5강', funcore: '13개', sub: '시간의 정수 5개 / 정뱅 80만' },
+                { stage: '+6강', funcore: '16개', sub: '시간의 정수 7개 / 정뱅 110만' },
+                { stage: '+7강', funcore: '20개', sub: '시간의 정수 10개 / 정뱅 150만' },
+                { stage: '+8강', funcore: '25개', sub: '시간의 정수 14개 / 정뱅 200만' },
+                { stage: '+9강(MAX)', funcore: '30개', sub: '시간의 정수 20개 / 정뱅 250만' }
+            ],
+            totalRow: { funcore: '총 129개 (강화)', sub: '시간의 정수 66개 / 정뱅 945만' }
+        },
+        {
+            title: '에테리온 — 성계 무기 (+0 ~ +9)',
+            color: '#818cf8',
+            totalBadge: '9강 총 펀 코어 255개 (제작30+강화225)',
+            bossEntry: '<b>보스 입장 [D]:</b> 정력 15+ & 고대 무기[+7]+ / <span class="funcore-hl">펀 코어 5개</span> + 정뱅 50만 (결계 140타)',
+            craft: '<b>+0 각성(100%):</b> <span class="funcore-hl">펀 코어 30개</span> + 고대[+9] + 성계의 핵 + 무한의 조각 30개 + 정뱅 200만',
+            steps: [
+                { stage: '+1강', funcore: '5개', sub: '성계의 정수 1개 / 정뱅 40만' },
+                { stage: '+2강', funcore: '10개', sub: '성계의 정수 / 정뱅 증가' },
+                { stage: '+3강', funcore: '15개', sub: '성계의 정수 / 정뱅 증가' },
+                { stage: '+4강', funcore: '20개', sub: '성계의 정수 / 정뱅 증가' },
+                { stage: '+5강', funcore: '25개', sub: '성계의 정수 / 정뱅 증가' },
+                { stage: '+6강', funcore: '30개', sub: '성계의 정수 / 정뱅 증가' },
+                { stage: '+7강', funcore: '35개', sub: '성계 유성 격파 해금 / S키 Lv.7' },
+                { stage: '+8강', funcore: '40개', sub: '성계의 정수 / 정뱅 증가' },
+                { stage: '+9강', funcore: '45개', sub: '성계의 정수 25개 / 정뱅 500만' }
+            ],
+            totalRow: { funcore: '총 255개 (제작30 + 강화225)', sub: '성계의 정수 1→25개 / 정뱅 40만→500만' }
+        },
+        {
+            title: '네메시스 — 창세 무기 (+0 ~ +9)',
+            color: '#f43f5e',
+            totalBadge: '제작 50개 + 강화 8→60개',
+            bossEntry: '<b>보스 입장 [F]:</b> 정력 20+ & 성계 무기[+7]+ / <span class="funcore-hl">펀 코어 8개</span> + 정뱅 100만 (결계 180타)',
+            craft: '<b>+0 각성(100%):</b> <span class="funcore-hl">펀 코어 50개</span> + 성계[+9] + 태초의 핵 + 무한의 조각 50개 + 정뱅 400만',
+            steps: [
+                { stage: '+1강 → +9강', funcore: '8개 → 60개', sub: '태초의 정수 1→30개 / 정뱅 80만→1,000만' },
+                { stage: '+7강 해금', funcore: '-', sub: '창세 심판 폭발(7%, 21억) / S키 Lv.8' }
+            ],
+            totalRow: { funcore: '제작 50 + 강화(8→60개)', sub: '태초의 정수 1→30개 / 정뱅 80만→1,000만' }
+        },
+        {
+            title: '주요 방어구 · 스킬북 조합 요약',
+            color: '#10b981',
+            totalBadge: '핵심 재료',
+            craft: '<b>날만강[HP:5]:</b> <span class="funcore-hl">펀 코어 10</span> + HP:4 + 업글석 10 + 정뱅 5만<br><b>날만강[HP:6]:</b> <span class="funcore-hl">펀 코어 15</span> + HP:5 + 업글석 15 + 무한조각 10 + 정뱅 30만<br><b>제4장 스킬북:</b> <span class="funcore-hl">펀 코어 20</span> + 제3장 + 시간의 핵 + 무한조각 100 + 정뱅 200만',
+            steps: [],
+            totalRow: null
+        }
+    ];
+
+    itemsBox.innerHTML = itemGuides.map(g => {
+        const rowsHtml = g.steps.map(st => `
+            <tr>
+                <td>${st.stage}</td>
+                <td class="funcore-hl">${st.funcore}</td>
+                <td>${st.sub}</td>
+            </tr>
+        `).join('');
+        const totalHtml = g.totalRow ? `
+            <tr class="total-row">
+                <td>+9 총합</td>
+                <td class="funcore-hl">${g.totalRow.funcore}</td>
+                <td>${g.totalRow.sub}</td>
+            </tr>
+        ` : '';
+        const tableHtml = g.steps.length > 0 ? `
+            <table class="info-enhance-table">
+                <thead>
+                    <tr>
+                        <th style="width:24%">단계</th>
+                        <th style="width:32%">펀 코어</th>
+                        <th style="width:44%">기타 소모 재료</th>
+                    </tr>
+                </thead>
+                <tbody>${rowsHtml}${totalHtml}</tbody>
+            </table>
+        ` : '';
+        const bossEntryHtml = g.bossEntry ? `<div class="info-boss-entry">${g.bossEntry}</div>` : '';
+        return `
+            <div class="info-guide-card">
+                <div class="info-card-top">
+                    <span class="info-card-title" style="color:${g.color}">${g.title}</span>
+                    <span class="info-total-badge">${g.totalBadge}</span>
+                </div>
+                ${bossEntryHtml}
+                <div class="info-craft-row">${g.craft}</div>
+                ${tableHtml}
+            </div>
+        `;
+    }).join('');
+
+    const bossGuides = [
+        {
+            title: '중간보스',
+            color: '#cbd5e1',
+            conds: [
+                'VIP 10 이상 입장 가능',
+                '1일 5회 가능'
+            ],
+            rewards: [
+                '1회 클리어 시: 정수 1만, 정신력 10만 획득'
+            ]
+        },
+        {
+            title: '협동보스',
+            color: '#38bdf8',
+            conds: [
+                'VIP 20 이상 입장 가능',
+                '1일 5회 가능'
+            ],
+            rewards: [
+                '1회 클리어 시: 정수 10만, 정신력 100만 획득'
+            ]
+        },
+        {
+            title: '월보 (월드보스)',
+            color: '#facc15',
+            conds: [
+                '오픈 시간: 오전 8시~11시 / 오후 8시~11시',
+                '보스 메뉴(BOSS) → 월드보스 (카오스보스와 신전 공유)'
+            ],
+            rewards: [
+                '펀 코어 0~3개',
+                '정수뱅크, 정신력, 확률증가권 등 타수 달성 보상',
+                '초희귀 드랍: 2% 확률 [무한의 탑 입장권]'
+            ]
+        },
+        {
+            title: '카오스보스 (총 30만 타격)',
+            color: '#f43f5e',
+            conds: [
+                '미다스 무기 이상 착용 / 상시 오픈 (1일 1회, 자정 리셋)',
+                '보스 메뉴(BOSS) → [카오스보스] (4종 패턴 회피 기믹)'
+            ],
+            rewards: [
+                '4만타 달성: 정뱅 +70만 / 정신력 +700만 / 확증+30 (1위 5장, 2위 4장, 일반 2장) / 펀 코어 2~6개',
+                '2만타 참여: 정뱅 +35만 / 정신력 +350만 / 확증+30 1장 / 펀 코어 1~2개(확률)',
+                '초희귀 드랍: 5% 확률 [무한의 탑 입장권]'
+            ]
+        },
+        {
+            title: '무한의 탑 (1층 ~ 50층)',
+            color: '#c084fc',
+            conds: [
+                '정력 10 이상 & 아바돈[+7] 이상 착용',
+                '1일 1회 무료 입장 (자정 리셋) / 입장권 소지 시 재입장 가능',
+                '1~5인 파티 협동 (입장 후 20초 대기)'
+            ],
+            rewards: [
+                '매 층 정복: 전원 정수뱅크 +(층수 × 10,000)',
+                '매 5층 보스 층: 전원 펀 코어 1개 (50층 완주 시 총 10개)',
+                '바닥 드랍: 최고 VIP 기준 차등 확률로 [무한의 조각] 드랍'
+            ]
+        }
+    ];
+
+    bossesBox.innerHTML = bossGuides.map(b => `
+        <div class="info-guide-card">
+            <div class="info-card-top">
+                <span class="info-card-title" style="color:${b.color}">${b.title}</span>
+            </div>
+            <div class="boss-section-block">
+                <span class="boss-block-label cond">입장 조건</span>
+                <ul class="boss-info-list">
+                    ${b.conds.map(c => `<li>${c}</li>`).join('')}
+                </ul>
+            </div>
+            <div class="boss-section-block">
+                <span class="boss-block-label reward">주요 보상</span>
+                <ul class="boss-info-list">
+                    ${b.rewards.map(r => `<li>${r}</li>`).join('')}
+                </ul>
+            </div>
+        </div>
+    `).join('');
 }

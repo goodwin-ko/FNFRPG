@@ -226,6 +226,34 @@ def fetch_rankings_page(page=1):
 RANKINGS_CACHE = {'data': None, 'time': 0, 'lock': threading.Lock()}
 RANKINGS_CACHE_TTL = 300  # 5 minutes
 
+def extract_quick_stats(parsed):
+    funcore_id = 1227905614
+    funcore_count = 0
+    for s in range(1, 7):
+        if parsed.get(f'hi{s}') == funcore_id:
+            cnt = parsed.get(f'h{s}c', 0)
+            funcore_count += (cnt if cnt > 0 else 1)
+    for b in range(1, 9):
+        for s in range(1, 7):
+            ikey = f'bi{s}' if b == 1 else f'b{b}i{s}'
+            if parsed.get(ikey) == funcore_id:
+                if b == 1:
+                    cnt = parsed.get(f'b1{s}c', parsed.get(f'b{s}c', 0))
+                else:
+                    cnt = parsed.get(f'b{b}{s}c', 0)
+                funcore_count += (cnt if cnt > 0 else 1)
+
+    return {
+        'vip': parsed.get('pVIP', 0),
+        'suryeon': parsed.get('pSooryun', 0),
+        'bank': parsed.get('pBank', 0),
+        'power': parsed.get('pPower', 0),
+        'statue': parsed.get('pStatue', 0),
+        'fairy': parsed.get('pFairy', 0),
+        'pet': parsed.get('pPet', 0),
+        'funcore': funcore_count,
+    }
+
 def fetch_user_quick_stats(nicname, target_char='FUN'):
     encoded_name = urllib.parse.quote(nicname)
     url = f"https://m16tool.xyz/Game/FNF%20RPG%20J/UserLog/LogResult?nicName={encoded_name}"
@@ -258,25 +286,9 @@ def fetch_user_quick_stats(nicname, target_char='FUN'):
             if fallback_data is None:
                 fallback_data = parsed
             if slot == target_char or slot == 'FUN' or 'pVIP' in parsed:
-                return {
-                    'vip': parsed.get('pVIP', 0),
-                    'suryeon': parsed.get('pSooryun', 0),
-                    'bank': parsed.get('pBank', 0),
-                    'power': parsed.get('pPower', 0),
-                    'statue': parsed.get('pStatue', 0),
-                    'fairy': parsed.get('pFairy', 0),
-                    'pet': parsed.get('pPet', 0),
-                }
+                return extract_quick_stats(parsed)
         if fallback_data:
-            return {
-                'vip': fallback_data.get('pVIP', 0),
-                'suryeon': fallback_data.get('pSooryun', 0),
-                'bank': fallback_data.get('pBank', 0),
-                'power': fallback_data.get('pPower', 0),
-                'statue': fallback_data.get('pStatue', 0),
-                'fairy': fallback_data.get('pFairy', 0),
-                'pet': fallback_data.get('pPet', 0),
-            }
+            return extract_quick_stats(fallback_data)
     except Exception:
         pass
     return {}
@@ -323,6 +335,7 @@ def fetch_rankings(limit=100, force_refresh=False):
             r['statue'] = stats.get('statue', 0)
             r['fairy'] = stats.get('fairy', 0)
             r['pet'] = stats.get('pet', 0)
+            r['funcore'] = stats.get('funcore', 0)
             return r
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
